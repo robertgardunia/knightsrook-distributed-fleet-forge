@@ -1,0 +1,12 @@
+{
+  "name": "knightsrook-distributed-fleet-forge",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"pnpm --filter server dev\" \"pnpm --filter client dev\"",
+    "build": "pnpm --filter server build && pnpm --filter client build",
+    "start": "pnpm --filter server start"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.0"
+  }
+}
