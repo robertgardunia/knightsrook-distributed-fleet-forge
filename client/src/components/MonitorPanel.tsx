@@ -47,7 +47,7 @@ export default function MonitorPanel({ node }: { node: FleetNode }) {
           Monitor · {node.name}
         </span>
       </div>
-      <pre style={{ flex: 1, margin: 0, padding: '12px 14px', color: '#4ade80', fontSize: '0.7rem', fontFamily: '"Cascadia Code", "Fira Code", monospace', lineHeight: 1.7, overflow: 'auto', whiteSpace: 'pre' }}>
+      <pre style={{ flex: 1, minHeight: 0, margin: 0, padding: '12px 14px', color: '#4ade80', fontSize: '0.7rem', fontFamily: '"Cascadia Code", "Fira Code", monospace', lineHeight: 1.7, overflow: 'hidden', whiteSpace: 'pre' }}>
 {`  CPU  ${bar(stats.cpu)} ${stats.cpu.toFixed(0).padStart(2)}%
   MEM  ${bar(stats.mem)} ${stats.mem.toFixed(0).padStart(2)}%
   NET  ↓ ${stats.netIn.toFixed(1)} KB/s  ↑ ${stats.netOut.toFixed(1)} KB/s

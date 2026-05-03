@@ -20,7 +20,7 @@ function LogsView({ node }: { node: FleetNode }) {
     { text: `█`, color: '#4ade80' },
   ];
   return (
-    <div style={{ flex: 1, background: '#020c1b', padding: '14px 16px', overflow: 'auto', fontFamily: '"Cascadia Code", "Fira Code", monospace', fontSize: '0.68rem', lineHeight: 1.7 }}>
+    <div style={{ flex: 1, minHeight: 0, background: '#020c1b', padding: '14px 16px', overflow: 'hidden', fontFamily: '"Cascadia Code", "Fira Code", monospace', fontSize: '0.68rem', lineHeight: 1.7 }}>
       {lines.map((l, i) => (
         <div key={i} style={{ color: l.color || 'transparent' }}>{l.text || ' '}</div>
       ))}
@@ -40,7 +40,7 @@ function ShellView({ node }: { node: FleetNode }) {
   ];
 
   return (
-    <div style={{ flex: 1, background: '#020c1b', padding: '14px 16px', overflow: 'auto', fontFamily: '"Cascadia Code", "Fira Code", monospace', fontSize: '0.68rem', lineHeight: 1.7 }}>
+    <div style={{ flex: 1, minHeight: 0, background: '#020c1b', padding: '14px 16px', overflow: 'hidden', fontFamily: '"Cascadia Code", "Fira Code", monospace', fontSize: '0.68rem', lineHeight: 1.7 }}>
       {history.map((item, i) => (
         <div key={i}>
           {item.cmd && (

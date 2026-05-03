@@ -162,7 +162,7 @@ export default function StatsPanel({ node }: { node: FleetNode }) {
         </span>
       </div>
 
-      <div style={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
         {tab === 'stats'  && <StatsView node={node} />}
         {tab === 'screen' && <ScreenView node={node} />}
       </div>
