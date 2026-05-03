@@ -44,9 +44,8 @@ export default function FleetGraph({ graph, onNodeSelect, selectedNodeId }: Prop
   useEffect(() => {
     if (!graph.nodes.length || !fgRef.current || forcesApplied.current) return;
     forcesApplied.current = true;
-    fgRef.current.d3Force('charge').strength(-280);
+    fgRef.current.d3Force('charge').strength(-150);
     fgRef.current.d3Force('link').distance(70);
-    fgRef.current.d3ReheatSimulation();
   }, [graph.nodes.length]);
 
   // Zoom to fit when selection is cleared
