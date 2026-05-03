@@ -31,6 +31,10 @@ export default function FleetGraph({ graph, onNodeSelect, selectedNodeId }: Prop
     return () => { document.body.style.cursor = 'default'; };
   }, []);
 
+  useEffect(() => {
+    if (!selectedNodeId) fgRef.current?.zoomToFit(600, 40);
+  }, [selectedNodeId]);
+
   return (
     <div ref={containerRef} style={{ width: '100%', height: '100%' }}>
       <ForceGraph2D
@@ -49,9 +53,17 @@ export default function FleetGraph({ graph, onNodeSelect, selectedNodeId }: Prop
         }}
         linkColor={() => '#ffffff18'}
         backgroundColor="#0f172a"
-        onNodeClick={(node) => onNodeSelect(node as unknown as FleetNode)}
+        onNodeClick={(node) => {
+          const n = node as unknown as FleetNode & { x: number; y: number };
+          fgRef.current?.centerAt(n.x, n.y, 600);
+          fgRef.current?.zoom(2.5, 600);
+          onNodeSelect(n);
+        }}
         onNodeHover={(node) => { document.body.style.cursor = node ? 'pointer' : 'default'; }}
-        onBackgroundClick={() => onNodeSelect(null)}
+        onBackgroundClick={() => {
+          fgRef.current?.zoomToFit(600, 40);
+          onNodeSelect(null);
+        }}
         nodeCanvasObject={(node, ctx, globalScale) => {
           const n = node as unknown as FleetNode & { x: number; y: number };
           const isSelected = n.id === selectedNodeId;
