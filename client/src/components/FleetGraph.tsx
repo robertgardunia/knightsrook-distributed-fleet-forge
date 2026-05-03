@@ -74,7 +74,11 @@ export default function FleetGraph({ graph, onNodeSelect, selectedNodeId }: Prop
           const n = node as unknown as FleetNode;
           return `${n.name} · ${n.role} · ${n.status}`;
         }}
-        linkColor={() => '#ffffff18'}
+        linkColor={() => '#ffffff22'}
+        linkDirectionalParticles={2}
+        linkDirectionalParticleSpeed={0.004}
+        linkDirectionalParticleWidth={2}
+        linkDirectionalParticleColor={() => '#4ade80'}
         backgroundColor="#0f172a"
         onNodeClick={(node) => {
           const n = node as unknown as FleetNode & { x: number; y: number };
