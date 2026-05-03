@@ -71,8 +71,8 @@ export default function ScreenPanel({ node }: { node: FleetNode }) {
   const [tab, setTab] = useState<Tab>('logs');
 
   return (
-    <div style={{ background: '#000', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-      <div style={{ background: '#020c1b', borderBottom: '1px solid #0f172a', flexShrink: 0, display: 'flex', alignItems: 'center' }}>
+    <div style={{ background: '#000', display: 'flex', flexDirection: 'column', overflow: 'hidden', height: '100%', boxSizing: 'border-box' }}>
+      <div style={{ height: 34, background: '#0d1f35', borderBottom: '1px solid #1e293b', flexShrink: 0, display: 'flex', alignItems: 'center' }}>
         {(['logs', 'shell'] as Tab[]).map(t => (
           <button
             key={t}
@@ -82,7 +82,8 @@ export default function ScreenPanel({ node }: { node: FleetNode }) {
               border: 'none',
               borderBottom: `2px solid ${tab === t ? '#4ade80' : 'transparent'}`,
               color: tab === t ? '#f1f5f9' : '#475569',
-              padding: '7px 14px',
+              padding: '0 14px',
+              height: '100%',
               fontSize: '0.68rem',
               letterSpacing: '0.1em',
               textTransform: 'uppercase',

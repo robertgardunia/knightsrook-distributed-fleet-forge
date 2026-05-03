@@ -41,17 +41,11 @@ export default function MonitorPanel({ node }: { node: FleetNode }) {
   }, [node.id]);
 
   return (
-    <div style={{ background: '#020c1b', borderRight: '1px solid #1e293b', borderBottom: '1px solid #1e293b', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-      <div style={{ padding: '7px 12px', borderBottom: '1px solid #1e293b', display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-        <span style={{ color: '#475569', fontSize: '0.68rem', letterSpacing: '0.12em', textTransform: 'uppercase', flex: 1 }}>
+    <div style={{ background: '#020c1b', borderRight: '1px solid #1e293b', borderBottom: '1px solid #1e293b', display: 'flex', flexDirection: 'column', overflow: 'hidden', height: '100%', boxSizing: 'border-box' }}>
+      <div style={{ height: 34, padding: '0 14px', borderBottom: '1px solid #1e293b', background: '#0d1f35', display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+        <span style={{ color: '#475569', fontSize: '0.68rem', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
           Monitor · {node.name}
         </span>
-        <button
-          title="SSH not wired yet"
-          style={{ background: '#0c2340', border: '1px solid #1e4a6e', color: '#7dd3fc', padding: '2px 10px', fontSize: '0.68rem', cursor: 'not-allowed', borderRadius: 2, letterSpacing: '0.08em', opacity: 0.7 }}
-        >
-          SSH ↗
-        </button>
       </div>
       <pre style={{ flex: 1, margin: 0, padding: '12px 14px', color: '#4ade80', fontSize: '0.7rem', fontFamily: '"Cascadia Code", "Fira Code", monospace', lineHeight: 1.7, overflow: 'auto', whiteSpace: 'pre' }}>
 {`  CPU  ${bar(stats.cpu)} ${stats.cpu.toFixed(0).padStart(2)}%
