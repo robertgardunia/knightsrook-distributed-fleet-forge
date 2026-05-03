@@ -59,7 +59,7 @@ export function buildMockFleet(stationCount = 6): FleetGraph {
     });
     links.push({ source: 'homebase', target: stationId });
 
-    for (let k = 1; k <= 3; k++) {
+    for (let k = 1; k <= 6; k++) {
       const kioskId = `${stationId}-game-${k}`;
       nodes.push({
         id: kioskId,
@@ -72,16 +72,18 @@ export function buildMockFleet(stationCount = 6): FleetGraph {
       links.push({ source: stationId, target: kioskId });
     }
 
-    const infoId = `${stationId}-info`;
-    nodes.push({
-      id: infoId,
-      name: 'KI1',
-      role: 'info-kiosk',
-      status: 'federation',
-      val: NODE_SIZE['info-kiosk'],
-      color: STATUS_COLOR['federation'],
-    });
-    links.push({ source: stationId, target: infoId });
+    for (let i = 1; i <= 3; i++) {
+      const infoId = `${stationId}-info-${i}`;
+      nodes.push({
+        id: infoId,
+        name: `KI${i}`,
+        role: 'info-kiosk',
+        status: 'federation',
+        val: NODE_SIZE['info-kiosk'],
+        color: STATUS_COLOR['federation'],
+      });
+      links.push({ source: stationId, target: infoId });
+    }
   }
 
   return { nodes, links };
