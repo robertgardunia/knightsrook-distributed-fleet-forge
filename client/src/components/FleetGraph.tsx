@@ -2,6 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import ForceGraph2D from 'react-force-graph-2d';
 import type { FleetGraph, FleetNode } from '../types/fleet';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type FGInstance = any;
+
 interface Props {
   graph: FleetGraph;
   onNodeSelect: (node: FleetNode | null) => void;
@@ -10,6 +13,7 @@ interface Props {
 
 export default function FleetGraph({ graph, onNodeSelect, selectedNodeId }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const fgRef = useRef<FGInstance>(null);
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
 
   useEffect(() => {
@@ -17,6 +21,7 @@ export default function FleetGraph({ graph, onNodeSelect, selectedNodeId }: Prop
     const observer = new ResizeObserver((entries) => {
       const { width, height } = entries[0].contentRect;
       setDimensions({ width, height });
+      fgRef.current?.zoomToFit(200, 40);
     });
     observer.observe(containerRef.current);
     return () => observer.disconnect();
@@ -29,7 +34,11 @@ export default function FleetGraph({ graph, onNodeSelect, selectedNodeId }: Prop
   return (
     <div ref={containerRef} style={{ width: '100%', height: '100%' }}>
       <ForceGraph2D
+        ref={fgRef}
         graphData={graph}
+        warmupTicks={200}
+        cooldownTime={2000}
+        onEngineStop={() => fgRef.current?.zoomToFit(400, 40)}
         width={dimensions.width}
         height={dimensions.height}
         nodeVal={(node) => (node as unknown as FleetNode).val}
