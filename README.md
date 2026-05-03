@@ -61,6 +61,8 @@ pnpm install
 pnpm dev
 ```
 
+> **Windows note:** Vite proxy targets use `127.0.0.1` instead of `localhost` to avoid the IPv6/IPv4 mismatch in Node 18+ on Windows.
+
 ## Docker
 
 ```bash
