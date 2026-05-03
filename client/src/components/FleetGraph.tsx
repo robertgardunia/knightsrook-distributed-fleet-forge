@@ -1,24 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
 import ForceGraph2D from 'react-force-graph-2d';
-import { io } from 'socket.io-client';
 import type { FleetGraph, FleetNode } from '../types/fleet';
 
-const socket = io();
-
 interface Props {
+  graph: FleetGraph;
   onNodeSelect: (node: FleetNode | null) => void;
   selectedNodeId?: string;
 }
 
-export default function FleetGraph({ onNodeSelect, selectedNodeId }: Props) {
-  const [graph, setGraph] = useState<FleetGraph>({ nodes: [], links: [] });
+export default function FleetGraph({ graph, onNodeSelect, selectedNodeId }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
-
-  useEffect(() => {
-    socket.on('fleet:graph', setGraph);
-    return () => { socket.off('fleet:graph', setGraph); };
-  }, []);
 
   useEffect(() => {
     if (!containerRef.current) return;
