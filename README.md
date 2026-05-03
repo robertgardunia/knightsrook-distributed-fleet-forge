@@ -2,6 +2,13 @@
 
 Distributed Fleet Forge: A containerized chaos lab where sovereign-tier kiosk fleets learn to survive everything you throw at them — and the test bed is the production build.
 
+## Socket events
+
+| Event | Direction | Description |
+|---|---|---|
+| `fleet:graph` | server → client | Full fleet graph (nodes + links) |
+| `fleet:request` | client → server | Request/re-request fleet data |
+
 ## Stack
 
 - **Frontend:** React + Vite (TypeScript), react-force-graph-2d, socket.io-client

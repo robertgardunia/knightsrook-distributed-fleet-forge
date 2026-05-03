@@ -13,6 +13,7 @@ const io = new Server(httpServer, {
 
 io.on('connection', (socket) => {
   socket.emit('fleet:graph', buildMockFleet());
+  socket.on('fleet:request', () => socket.emit('fleet:graph', buildMockFleet()));
 });
 
 httpServer.listen(PORT, () => {

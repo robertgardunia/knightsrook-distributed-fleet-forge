@@ -18,8 +18,14 @@ export default function App() {
   const open = selected !== null;
 
   useEffect(() => {
+    const requestGraph = () => socket.emit('fleet:request');
     socket.on('fleet:graph', setGraph);
-    return () => { socket.off('fleet:graph', setGraph); };
+    socket.on('connect', requestGraph);
+    if (socket.connected) requestGraph();
+    return () => {
+      socket.off('fleet:graph', setGraph);
+      socket.off('connect', requestGraph);
+    };
   }, []);
 
   return (
