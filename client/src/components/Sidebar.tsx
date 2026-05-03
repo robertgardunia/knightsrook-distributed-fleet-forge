@@ -126,7 +126,7 @@ function NodeDetail({ node, onClose }: { node: FleetNode; onClose: () => void })
         ] as [string, string][]).map(([label, value]) => (
           <div key={label} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
             <span style={{ color: '#475569', fontSize: '0.65rem' }}>{label}</span>
-            <span style={{ color: label === 'ID' ? '#334155' : '#94a3b8', fontSize: '0.65rem', fontFamily: 'monospace', textAlign: 'right', maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis' }}>{value}</span>
+            <span style={{ color: label === 'ID' ? '#334155' : '#94a3b8', fontSize: '0.65rem', textAlign: 'right', maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis' }}>{value}</span>
           </div>
         ))}
 
@@ -136,18 +136,18 @@ function NodeDetail({ node, onClose }: { node: FleetNode; onClose: () => void })
         <div style={{ background: '#000', borderRadius: 3, height: 72, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #0f172a', marginBottom: 12, overflow: 'hidden' }}>
           {node.role === 'game-kiosk' && (
             <div style={{ textAlign: 'center' }}>
-              <div style={{ color: '#facc15', fontSize: '1rem', fontWeight: 700, fontFamily: 'monospace' }}>{((s * 137) % 99800).toLocaleString()}</div>
+              <div style={{ color: '#facc15', fontSize: '1rem', fontWeight: 700 }}>{((s * 137) % 99800).toLocaleString()}</div>
               <div style={{ color: '#4ade80', fontSize: '0.52rem', marginTop: 2 }}>▶ IN PROGRESS</div>
             </div>
           )}
           {node.role === 'info-kiosk' && (
-            <div style={{ color: '#7dd3fc', fontSize: '0.58rem', textAlign: 'center', fontFamily: 'monospace' }}>
+            <div style={{ color: '#7dd3fc', fontSize: '0.58rem', textAlign: 'center' }}>
               <div>3:30 PM</div>
               <div style={{ color: '#f1f5f9', marginTop: 2 }}>Free Play</div>
             </div>
           )}
           {(node.role === 'homebase' || node.role === 'station-controller') && (
-            <div style={{ color: '#4ade80', fontSize: '0.58rem', padding: '6px 10px', alignSelf: 'flex-start', width: '100%', fontFamily: 'monospace' }}>
+            <div style={{ color: '#4ade80', fontSize: '0.58rem', padding: '6px 10px', alignSelf: 'flex-start', width: '100%' }}>
               <div style={{ color: '#facc15' }}>$ fleet-agent status</div>
               <div>● active (running)</div>
             </div>
@@ -198,7 +198,6 @@ export default function Sidebar({ graph, selected, onClose }: Props) {
       flexDirection: 'column',
       overflow: 'hidden',
       fontSize: '0.7rem',
-      fontFamily: '"Cascadia Code", "Fira Code", monospace',
       color: '#94a3b8',
     }}>
       <div style={{ padding: '7px 14px', borderBottom: '1px solid #1e293b', flexShrink: 0 }}>

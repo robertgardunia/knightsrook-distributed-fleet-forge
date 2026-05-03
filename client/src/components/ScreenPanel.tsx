@@ -94,7 +94,7 @@ export default function ScreenPanel({ node }: { node: FleetNode }) {
             {t}
           </button>
         ))}
-        <span style={{ marginLeft: 'auto', paddingRight: 12, color: '#334155', fontSize: '0.62rem', fontFamily: 'monospace' }}>
+        <span style={{ marginLeft: 'auto', paddingRight: 12, color: '#334155', fontSize: '0.62rem' }}>
           {node.name}
         </span>
       </div>

@@ -26,7 +26,7 @@ function Row({ label, value }: { label: string; value: ReactNode }) {
       <td style={{ padding: '7px 14px', color: '#475569', fontSize: '0.68rem', letterSpacing: '0.08em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
         {label}
       </td>
-      <td style={{ padding: '7px 14px', color: '#cbd5e1', fontSize: '0.72rem', fontFamily: '"Cascadia Code", "Fira Code", monospace' }}>
+      <td style={{ padding: '7px 14px', color: '#cbd5e1', fontSize: '0.72rem' }}>
         {value}
       </td>
     </tr>
@@ -66,7 +66,7 @@ function GameScreen({ node }: { node: FleetNode }) {
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#000514', gap: 8 }}>
       <div style={{ fontSize: '0.6rem', color: '#475569', letterSpacing: '0.3em' }}>STATION ARCADE</div>
-      <div style={{ fontSize: '2.2rem', color: '#facc15', fontWeight: 700, letterSpacing: '0.1em', fontFamily: 'monospace' }}>
+      <div style={{ fontSize: '2.2rem', color: '#facc15', fontWeight: 700, letterSpacing: '0.1em' }}>
         {score.toLocaleString().padStart(6, '0')}
       </div>
       <div style={{ fontSize: '0.62rem', color: '#4ade80', letterSpacing: '0.1em' }}>▶ GAME IN PROGRESS</div>
@@ -93,7 +93,7 @@ function InfoScreen() {
       {events.map((e, i) => (
         <div key={i} style={{ marginBottom: 14, borderLeft: `2px solid ${e.active ? '#4ade80' : '#1e293b'}`, paddingLeft: 12 }}>
           <div style={{ color: e.active ? '#4ade80' : '#475569', fontSize: '0.62rem', letterSpacing: '0.05em' }}>{e.time}</div>
-          <div style={{ color: e.active ? '#f1f5f9' : '#64748b', fontSize: '0.76rem', marginTop: 2, fontFamily: 'monospace' }}>{e.title}</div>
+          <div style={{ color: e.active ? '#f1f5f9' : '#64748b', fontSize: '0.76rem', marginTop: 2 }}>{e.title}</div>
         </div>
       ))}
     </div>
@@ -110,7 +110,7 @@ function ControllerScreen({ node }: { node: FleetNode }) {
     ['KIOSKS ONLINE', `${(s % 3) + 7} / 9`],
   ];
   return (
-    <div style={{ flex: 1, background: '#000814', padding: '16px', overflow: 'auto', fontFamily: '"Cascadia Code", "Fira Code", monospace', fontSize: '0.68rem' }}>
+    <div style={{ flex: 1, background: '#000814', padding: '16px', overflow: 'auto', fontSize: '0.68rem' }}>
       <div style={{ color: '#475569', fontSize: '0.58rem', letterSpacing: '0.15em', marginBottom: 14 }}>SYSTEM STATUS</div>
       {rows.map(([label, value]) => (
         <div key={label} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
@@ -157,7 +157,7 @@ export default function StatsPanel({ node }: { node: FleetNode }) {
             {t}
           </button>
         ))}
-        <span style={{ marginLeft: 'auto', paddingRight: 12, color: '#334155', fontSize: '0.62rem', fontFamily: 'monospace' }}>
+        <span style={{ marginLeft: 'auto', paddingRight: 12, color: '#334155', fontSize: '0.62rem' }}>
           {node.name}
         </span>
       </div>
