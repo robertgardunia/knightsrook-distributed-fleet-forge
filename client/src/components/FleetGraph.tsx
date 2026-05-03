@@ -30,7 +30,7 @@ export default function FleetGraph({ graph, onNodeSelect, selectedNodeId }: Prop
     const observer = new ResizeObserver((entries) => {
       const { width, height } = entries[0].contentRect;
       setDimensions({ width, height });
-      if (!manualZoom.current) fgRef.current?.zoomToFit(200, 40);
+      if (!manualZoom.current) fgRef.current?.zoomToFit(200, 10);
     });
     observer.observe(containerRef.current);
     return () => observer.disconnect();
@@ -52,7 +52,7 @@ export default function FleetGraph({ graph, onNodeSelect, selectedNodeId }: Prop
   useEffect(() => {
     if (!selectedNodeId) {
       manualZoom.current = false;
-      fgRef.current?.zoomToFit(600, 40);
+      fgRef.current?.zoomToFit(600, 10);
     }
   }, [selectedNodeId]);
 
@@ -64,7 +64,7 @@ export default function FleetGraph({ graph, onNodeSelect, selectedNodeId }: Prop
         warmupTicks={200}
         cooldownTime={2000}
         onEngineStop={() => {
-          if (!manualZoom.current) fgRef.current?.zoomToFit(400, 40);
+          if (!manualZoom.current) fgRef.current?.zoomToFit(400, 10);
         }}
         width={dimensions.width}
         height={dimensions.height}
@@ -90,7 +90,7 @@ export default function FleetGraph({ graph, onNodeSelect, selectedNodeId }: Prop
         onNodeHover={(node) => { document.body.style.cursor = node ? 'pointer' : 'default'; }}
         onBackgroundClick={() => {
           manualZoom.current = false;
-          fgRef.current?.zoomToFit(600, 40);
+          fgRef.current?.zoomToFit(600, 10);
           onNodeSelect(null);
         }}
         nodeCanvasObject={(node, ctx, globalScale) => {
