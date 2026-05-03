@@ -108,8 +108,15 @@ export default function App() {
 
         </div>
 
-        {/* Right area — always-on sidebar */}
-        <Sidebar graph={graph} selected={selected} onClose={() => setSelected(null)} />
+        {/* Right area — sidebar visible only in fleet overview (no node selected) */}
+        <div style={{
+          width: open ? 0 : 280,
+          overflow: 'hidden',
+          flexShrink: 0,
+          transition: 'width 0.35s ease',
+        }}>
+          <Sidebar graph={graph} selected={selected} onClose={() => setSelected(null)} />
+        </div>
 
       </div>
     </div>
