@@ -24,8 +24,8 @@ Click any node in the fleet graph to open a 2×2 panel layout:
 |---|---|---|
 | Upper-left | Monitor | Animated htop-style CPU/MEM/NET + process list. SSH button (stub). |
 | Upper-right | Fleet graph | Force-directed topology, shrinks to quadrant |
-| Lower-left | Stats | Uptime, CPU, RAM, disk, network, ping, node ID |
-| Lower-right | Screen | Role-aware: game kiosks show a game screen, info kiosks show a schedule, controllers/homebase show a terminal log |
+| Lower-left | Stats/Screen | Two tabs: Stats (uptime, CPU, RAM, disk, net, ping, ID) and Screen (role-aware: game kiosks show arcade display, info kiosks show event schedule, controllers/homebase show system status) |
+| Lower-right | Logs/Shell | Two tabs: Logs (streaming journal output) and Shell (interactive bash session) |
 
 Click background or the ✕ button to return to full-screen graph.
 
