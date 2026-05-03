@@ -190,6 +190,7 @@ export default function Sidebar({ graph, selected, onClose }: Props) {
   return (
     <div style={{
       width: 280,
+      height: '100%',
       flexShrink: 0,
       background: '#020c1b',
       borderLeft: '1px solid #1e293b',
