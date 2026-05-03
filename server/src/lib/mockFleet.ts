@@ -40,7 +40,7 @@ export function buildMockFleet(stationCount = 6): FleetGraph {
 
   nodes.push({
     id: 'homebase',
-    name: 'Home Base',
+    name: 'Home',
     role: 'homebase',
     status: 'federation',
     val: NODE_SIZE['homebase'],
@@ -51,7 +51,7 @@ export function buildMockFleet(stationCount = 6): FleetGraph {
     const stationId = `station-${s}`;
     nodes.push({
       id: stationId,
-      name: `Station ${s}`,
+      name: `S${s}`,
       role: 'station-controller',
       status: 'federation',
       val: NODE_SIZE['station-controller'],
@@ -63,7 +63,7 @@ export function buildMockFleet(stationCount = 6): FleetGraph {
       const kioskId = `${stationId}-game-${k}`;
       nodes.push({
         id: kioskId,
-        name: `Game ${k}`,
+        name: `KG${k}`,
         role: 'game-kiosk',
         status: 'federation',
         val: NODE_SIZE['game-kiosk'],
@@ -75,7 +75,7 @@ export function buildMockFleet(stationCount = 6): FleetGraph {
     const infoId = `${stationId}-info`;
     nodes.push({
       id: infoId,
-      name: 'Info',
+      name: 'KI1',
       role: 'info-kiosk',
       status: 'federation',
       val: NODE_SIZE['info-kiosk'],
