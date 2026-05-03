@@ -5,6 +5,13 @@ import type { FleetGraph, FleetNode } from '../types/fleet';
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type FGInstance = any;
 
+const ZOOM_LEVEL: Record<string, number> = {
+  'homebase':            1.8,
+  'station-controller':  3.5,
+  'game-kiosk':          6,
+  'info-kiosk':          6,
+};
+
 interface Props {
   graph: FleetGraph;
   onNodeSelect: (node: FleetNode | null) => void;
@@ -15,13 +22,15 @@ export default function FleetGraph({ graph, onNodeSelect, selectedNodeId }: Prop
   const containerRef = useRef<HTMLDivElement>(null);
   const fgRef = useRef<FGInstance>(null);
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
+  const manualZoom = useRef(false);
+  const forcesApplied = useRef(false);
 
   useEffect(() => {
     if (!containerRef.current) return;
     const observer = new ResizeObserver((entries) => {
       const { width, height } = entries[0].contentRect;
       setDimensions({ width, height });
-      fgRef.current?.zoomToFit(200, 40);
+      if (!manualZoom.current) fgRef.current?.zoomToFit(200, 40);
     });
     observer.observe(containerRef.current);
     return () => observer.disconnect();
@@ -31,8 +40,21 @@ export default function FleetGraph({ graph, onNodeSelect, selectedNodeId }: Prop
     return () => { document.body.style.cursor = 'default'; };
   }, []);
 
+  // Spread kiosks out with stronger repulsion once graph data arrives
   useEffect(() => {
-    if (!selectedNodeId) fgRef.current?.zoomToFit(600, 40);
+    if (!graph.nodes.length || !fgRef.current || forcesApplied.current) return;
+    forcesApplied.current = true;
+    fgRef.current.d3Force('charge').strength(-280);
+    fgRef.current.d3Force('link').distance(70);
+    fgRef.current.d3ReheatSimulation();
+  }, [graph.nodes.length]);
+
+  // Zoom to fit when selection is cleared
+  useEffect(() => {
+    if (!selectedNodeId) {
+      manualZoom.current = false;
+      fgRef.current?.zoomToFit(600, 40);
+    }
   }, [selectedNodeId]);
 
   return (
@@ -42,7 +64,9 @@ export default function FleetGraph({ graph, onNodeSelect, selectedNodeId }: Prop
         graphData={graph}
         warmupTicks={200}
         cooldownTime={2000}
-        onEngineStop={() => fgRef.current?.zoomToFit(400, 40)}
+        onEngineStop={() => {
+          if (!manualZoom.current) fgRef.current?.zoomToFit(400, 40);
+        }}
         width={dimensions.width}
         height={dimensions.height}
         nodeVal={(node) => (node as unknown as FleetNode).val}
@@ -55,12 +79,14 @@ export default function FleetGraph({ graph, onNodeSelect, selectedNodeId }: Prop
         backgroundColor="#0f172a"
         onNodeClick={(node) => {
           const n = node as unknown as FleetNode & { x: number; y: number };
+          manualZoom.current = true;
           fgRef.current?.centerAt(n.x, n.y, 600);
-          fgRef.current?.zoom(2.5, 600);
+          fgRef.current?.zoom(ZOOM_LEVEL[n.role] ?? 3, 600);
           onNodeSelect(n);
         }}
         onNodeHover={(node) => { document.body.style.cursor = node ? 'pointer' : 'default'; }}
         onBackgroundClick={() => {
+          manualZoom.current = false;
           fgRef.current?.zoomToFit(600, 40);
           onNodeSelect(null);
         }}
