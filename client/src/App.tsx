@@ -41,24 +41,58 @@ export default function App() {
 
   return (
     <div style={{ width: '100%', height: '100dvh', background: '#0f172a', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-      <header style={{ padding: '8px 20px', borderBottom: '1px solid #1e293b', background: '#0d1f35', flexShrink: 0, display: 'flex', alignItems: 'center' }}>
-        <h1 style={{ margin: 0, color: '#f1f5f9', fontSize: '0.78rem', fontWeight: 600, letterSpacing: '0.15em', textTransform: 'uppercase' }}>
+      <header style={{ height: 52, padding: '0 20px', borderBottom: '1px solid #1e293b', background: '#0d1f35', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 12 }}>
+
+        {/* Title */}
+        <h1 style={{ margin: 0, color: '#f1f5f9', fontSize: '0.78rem', fontWeight: 600, letterSpacing: '0.15em', textTransform: 'uppercase', flexShrink: 0 }}>
           Distributed Fleet Forge
         </h1>
-        <div style={{
-          marginLeft: 'auto',
-          opacity: open ? 1 : 0,
-          transform: open ? 'translateY(0)' : 'translateY(-4px)',
-          transition: 'opacity 0.2s ease, transform 0.2s ease',
-          pointerEvents: open ? 'auto' : 'none',
-        }}>
-          <button
-            onClick={() => setSelected(null)}
-            style={{ background: 'transparent', border: '1px solid #334155', color: '#64748b', padding: '2px 10px', fontSize: '0.7rem', cursor: 'pointer', borderRadius: 2, letterSpacing: '0.05em' }}
-          >
-            ✕ {panelNode?.name}
+
+        {/* Search */}
+        <div style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
+          <div style={{ position: 'relative', width: '100%', maxWidth: 300 }}>
+            <span style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: '#475569', fontSize: '0.8rem', pointerEvents: 'none' }}>⌕</span>
+            <input
+              placeholder="Search nodes…"
+              style={{ width: '100%', background: '#061322', border: '1px solid #1e293b', borderRadius: 3, padding: '5px 10px 5px 26px', color: '#cbd5e1', fontSize: '0.7rem', outline: 'none', fontFamily: 'inherit', letterSpacing: '0.04em' }}
+            />
+          </div>
+        </div>
+
+        {/* Right controls */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 2, flexShrink: 0 }}>
+
+          {/* Close node button */}
+          <div style={{
+            opacity: open ? 1 : 0,
+            transform: open ? 'translateY(0)' : 'translateY(-4px)',
+            transition: 'opacity 0.2s ease, transform 0.2s ease',
+            pointerEvents: open ? 'auto' : 'none',
+            marginRight: 8,
+          }}>
+            <button
+              onClick={() => setSelected(null)}
+              style={{ background: 'transparent', border: '1px solid #334155', color: '#64748b', padding: '3px 10px', fontSize: '0.7rem', cursor: 'pointer', borderRadius: 2, letterSpacing: '0.05em' }}
+            >
+              ✕ {panelNode?.name}
+            </button>
+          </div>
+
+          {/* Nav items */}
+          {(['Fleet', 'Alerts', 'Settings'] as const).map(label => (
+            <button key={label} style={{ background: 'transparent', border: 'none', color: '#475569', fontSize: '0.68rem', padding: '4px 10px', cursor: 'pointer', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+              {label}
+            </button>
+          ))}
+
+          <div style={{ width: 1, height: 16, background: '#1e293b', margin: '0 6px' }} />
+
+          {/* Sign in */}
+          <button style={{ background: '#0c2340', border: '1px solid #1e4a6e', color: '#7dd3fc', padding: '4px 14px', fontSize: '0.68rem', cursor: 'pointer', borderRadius: 2, letterSpacing: '0.08em' }}>
+            Sign In
           </button>
         </div>
+
       </header>
 
       {isMobile ? (
