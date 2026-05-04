@@ -46,7 +46,7 @@ export default function FleetGraph({ graph, onNodeSelect, selectedNodeId }: Prop
     fgRef.current.d3Force('charge').strength(charge);
     fgRef.current.d3Force('link').distance((link: { source: { id?: string } | string }) => {
       const src = typeof link.source === 'object' ? link.source.id : link.source;
-      return src === 'homebase' ? 80 : 40;
+      return src === 'homebase' ? 80 : 28;
     });
     fgRef.current.d3Force('collide', forceCollide((node: FleetNode) => Math.sqrt(node.val) * 3 + 6));
     fgRef.current.d3ReheatSimulation();
@@ -65,7 +65,7 @@ export default function FleetGraph({ graph, onNodeSelect, selectedNodeId }: Prop
       <ForceGraph2D
         ref={fgRef}
         graphData={graph}
-        warmupTicks={400}
+        warmupTicks={600}
         cooldownTime={3000}
         onEngineStop={() => {
           if (!manualZoom.current) fgRef.current?.zoomToFit(400, 10);
