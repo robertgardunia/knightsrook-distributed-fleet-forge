@@ -105,11 +105,11 @@ export default function App() {
   const [searchOpen, setSearchOpen] = useState(false);
   const fgHandle = useRef<FleetGraphHandle>(null);
   const gridRef = useRef<HTMLDivElement>(null);
-  const visibleGraph = (() => {
-    if (labMode === 'lab'  && graph.isMock !== false) return { nodes: [], links: [], isMock: true  as const };
-    if (labMode === 'demo' && graph.isMock !== true)  return { nodes: [], links: [], isMock: false as const };
-    return graph;
-  })();
+  const isForging = labMode === 'lab' && graph.isMock !== false;
+
+  const visibleGraph = (labMode === 'demo' && graph.isMock !== true)
+    ? { nodes: [], links: [], isMock: false as const }
+    : graph;
 
   const lastSelected = useRef<FleetNode | null>(null);
   if (selected) lastSelected.current = selected;
@@ -165,9 +165,9 @@ export default function App() {
     };
   }, [handleGraph, requestGraph]);
 
-  // On mode change: clear graph immediately then fetch correct dataset
+  // On mode change: clear graph when going to demo (fresh mock), just re-request for lab
   useEffect(() => {
-    setGraph({ nodes: [], links: [] });
+    if (labMode === 'demo') setGraph({ nodes: [], links: [] });
     if (socket.connected) requestGraph();
   }, [labMode, requestGraph]);
 
@@ -304,9 +304,11 @@ export default function App() {
               borderBottom: open ? '1px solid #1e293b' : 'none',
               boxSizing: 'border-box',
             }}>
-              <FleetGraph ref={fgHandle} graph={visibleGraph} onNodeSelect={setSelected} selectedNodeId={selected?.id} />
-              {labMode === 'lab' && graph.isMock !== false && (
-                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+              <div style={{ position: 'absolute', inset: 0, opacity: isForging ? 0.25 : 1, transition: 'opacity 0.4s ease' }}>
+                <FleetGraph ref={fgHandle} graph={visibleGraph} onNodeSelect={setSelected} selectedNodeId={selected?.id} />
+              </div>
+              {isForging && (
+                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none', background: 'rgba(15,23,42,0.55)' }}>
                   <span className="forging-label">Forging Network</span>
                 </div>
               )}
