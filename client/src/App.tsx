@@ -290,7 +290,7 @@ export default function App() {
               <FleetGraph ref={fgHandle} graph={visibleGraph} onNodeSelect={setSelected} selectedNodeId={selected?.id} />
               {labMode === 'lab' && graph.isMock !== false && (
                 <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
-                  <span style={{ color: '#334155', fontSize: '0.72rem', letterSpacing: '0.12em', textTransform: 'uppercase' }}>Waiting for agents…</span>
+                  <span className="forging-label">Forging Network</span>
                 </div>
               )}
             </div>

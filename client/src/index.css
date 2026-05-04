@@ -10,6 +10,30 @@ html, body, #root {
   font-family: 'Play', sans-serif;
 }
 
+/* Forging Network loading overlay */
+@keyframes forge-dots {
+  0%   { content: ''; }
+  25%  { content: '.'; }
+  50%  { content: '..'; }
+  75%  { content: '...'; }
+  100% { content: ''; }
+}
+@keyframes forge-pulse {
+  0%, 100% { opacity: 0.45; }
+  50%       { opacity: 0.9; }
+}
+.forging-label {
+  color: #334155;
+  font-size: 0.72rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  animation: forge-pulse 2s ease-in-out infinite;
+}
+.forging-label::after {
+  content: '';
+  animation: forge-dots 1.6s steps(4, end) infinite;
+}
+
 /* Custom scrollbars */
 ::-webkit-scrollbar {
   width: 6px;
