@@ -75,7 +75,7 @@ Force layout uses charge `-30` with per-link distances (homebase→station `80`,
 | `swarm` | orange | Kiosks operating without controller |
 | `dead` | red | Node unreachable |
 
-Nodes that miss 1–2 heartbeats (9–15s window) show a pulsing orange ring while still alive — visual warning before going dead.
+Nodes that miss 1–2 heartbeats (9–15s window) show a pulsing orange ring while still alive — visual warning before going dead. Sidebar node-detail header uses the same uppercase/spaced register as the panel tab headers.
 
 ## Quickstart
 

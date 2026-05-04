@@ -93,11 +93,11 @@ function NodeDetail({ node, onClose }: { node: FleetNode; onClose: () => void })
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <div style={{ padding: '10px 14px', borderBottom: '1px solid #1e293b', display: 'flex', alignItems: 'flex-start', gap: 8 }}>
         <div style={{ flex: 1 }}>
-          <div style={{ color: '#f1f5f9', fontSize: '0.82rem', fontWeight: 600, marginBottom: 2 }}>{node.name}</div>
-          <div style={{ color: '#475569', fontSize: '0.62rem', marginBottom: 4 }}>{roleLabel[node.role]}</div>
-          <div style={{ color: STATUS_COLOR[node.status], fontSize: '0.63rem' }}>● {node.status}</div>
+          <div style={{ color: '#94a3b8', fontSize: '0.68rem', fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 3 }}>{node.name}</div>
+          <div style={{ color: '#475569', fontSize: '0.62rem', letterSpacing: '0.1em', marginBottom: 4 }}>{roleLabel[node.role]}</div>
+          <div style={{ color: STATUS_COLOR[node.status], fontSize: '0.62rem', letterSpacing: '0.08em' }}>● {node.status}</div>
         </div>
-        <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: '#475569', cursor: 'pointer', fontSize: '1rem', lineHeight: 1, padding: '0 2px' }}>
+        <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '1rem', lineHeight: 1, padding: '0 2px' }}>
           ✕
         </button>
       </div>
@@ -201,7 +201,7 @@ export default function Sidebar({ graph, selected, onClose }: Props) {
       color: '#94a3b8',
     }}>
       <div style={{ padding: '7px 14px', borderBottom: '1px solid #1e293b', flexShrink: 0 }}>
-        <span style={{ color: '#334155', fontSize: '0.62rem', letterSpacing: '0.15em', textTransform: 'uppercase' }}>
+        <span style={{ color: '#64748b', fontSize: '0.62rem', letterSpacing: '0.15em', textTransform: 'uppercase' }}>
           {displayNode ? 'Node Detail' : 'Fleet Status'}
         </span>
       </div>
