@@ -84,30 +84,36 @@ export default function App() {
             </button>
           </div>
 
-          {/* Chaos lab toggle */}
-          <button
-            disabled={labBusy}
-            onClick={async () => {
-              setLabBusy(true);
-              await callChaos(graph.isMock === false ? 'stop' : 'start');
-              setTimeout(() => setLabBusy(false), 1500);
-            }}
-            style={{
-              background: graph.isMock === false ? '#1a0a0a' : '#0a1a0a',
-              border: `1px solid ${graph.isMock === false ? '#7f1d1d' : '#14532d'}`,
-              color: graph.isMock === false ? '#f87171' : '#4ade80',
-              padding: '4px 12px',
-              fontSize: '0.68rem',
-              cursor: labBusy ? 'default' : 'pointer',
-              borderRadius: 2,
-              letterSpacing: '0.08em',
-              opacity: labBusy ? 0.6 : 1,
-              transition: 'all 0.2s ease',
-              marginRight: 4,
-            }}
-          >
-            {labBusy ? '…' : graph.isMock === false ? 'Stop Lab' : 'Start Lab'}
-          </button>
+          {/* Mode toggle */}
+          {labBusy ? (
+            <span style={{ color: '#475569', fontSize: '0.65rem', letterSpacing: '0.08em', padding: '0 8px' }}>…</span>
+          ) : (
+            <div style={{ display: 'flex', border: '1px solid #1e293b', borderRadius: 3, overflow: 'hidden', marginRight: 6 }}>
+              {([
+                { label: 'Offline Demo', active: graph.isMock !== false, action: 'stop'  as const },
+                { label: 'Start Lab',    active: graph.isMock === false,  action: 'start' as const },
+              ] as const).map(({ label, active, action }) => (
+                <button
+                  key={label}
+                  disabled={active}
+                  onClick={async () => { setLabBusy(true); await callChaos(action); setTimeout(() => setLabBusy(false), 1500); }}
+                  style={{
+                    background: active ? '#0d2a1a' : 'transparent',
+                    border: 'none',
+                    borderLeft: label === 'Start Lab' ? '1px solid #1e293b' : 'none',
+                    color: active ? '#4ade80' : '#475569',
+                    padding: '4px 12px',
+                    fontSize: '0.65rem',
+                    cursor: active ? 'default' : 'pointer',
+                    letterSpacing: '0.08em',
+                    transition: 'all 0.2s ease',
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* Nav items */}
           {(['Fleet', 'Alerts', 'Settings'] as const).map(label => (
