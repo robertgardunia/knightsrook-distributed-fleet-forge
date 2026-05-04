@@ -67,7 +67,13 @@ function StatsView({ node, live }: { node: FleetNode; live?: NodeStats }) {
   );
 }
 
-const HEXGL_SCREENS = ['/games/hexgl-title.png', '/games/hexgl-gameover.jpg'];
+const HEXGL_SCREENS = [
+  '/games/hexgl-title.png',
+  '/games/hexgl-gameover.jpg',
+  '/games/hexgl-race1.webp',
+  '/games/hexgl-race2.webp',
+  '/games/hexgl-race3.png',
+];
 
 function GameScreen({ node }: { node: FleetNode }) {
   const src = HEXGL_SCREENS[seed(node.id) % HEXGL_SCREENS.length];
