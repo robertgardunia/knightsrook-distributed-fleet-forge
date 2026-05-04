@@ -26,6 +26,8 @@ COPY nginx.conf /etc/nginx/http.d/default.conf
 
 # Fleet agent
 WORKDIR /agent
+COPY package.json ./
+RUN npm install --omit=dev
 COPY --from=agent-build /build/dist ./dist
 
 COPY start.sh /start.sh

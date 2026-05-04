@@ -24,6 +24,8 @@ COPY containers/info-kiosk/nginx.conf /etc/nginx/http.d/default.conf
 
 # Fleet agent
 WORKDIR /agent
+COPY containers/fleet-agent/package.json ./
+RUN npm install --omit=dev
 COPY --from=agent-build /build/dist ./dist
 
 COPY containers/info-kiosk/start.sh /start.sh
