@@ -96,6 +96,7 @@ export default function App() {
   const [graph, setGraph] = useState<FleetGraphData>({ nodes: [], links: [] });
   const [selected, setSelected] = useState<FleetNode | null>(null);
   const [labBusy, setLabBusy] = useState(false);
+  const [labMode, setLabMode] = useState<'demo' | 'lab'>('demo');
   const [hSplit, setHSplit] = useState(50); // left col %
   const [vSplit, setVSplit] = useState(50); // top row %
   const [searchQuery, setSearchQuery] = useState('');
@@ -185,21 +186,21 @@ export default function App() {
           ) : (
             <div style={{ display: 'flex', border: '1px solid #1e293b', borderRadius: 3, overflow: 'hidden', marginRight: 6 }}>
               {([
-                { label: 'Offline Demo', active: graph.isMock !== false, action: 'stop'  as const },
-                { label: 'Online Lab',   active: graph.isMock === false,  action: 'start' as const },
-              ] as const).map(({ label, active, action }) => (
+                { label: 'Offline Demo', mode: 'demo' as const, action: 'stop'  as const },
+                { label: 'Online Lab',   mode: 'lab'  as const, action: 'start' as const },
+              ] as const).map(({ label, mode, action }) => (
                 <button
                   key={label}
-                  disabled={active}
-                  onClick={async () => { setLabBusy(true); await callChaos(action); setTimeout(() => setLabBusy(false), 1500); }}
+                  disabled={labMode === mode}
+                  onClick={async () => { setLabBusy(true); setLabMode(mode); await callChaos(action); setTimeout(() => setLabBusy(false), 1500); }}
                   style={{
-                    background: active ? '#0d2a1a' : 'transparent',
+                    background: labMode === mode ? '#0d2a1a' : 'transparent',
                     border: 'none',
                     borderLeft: label === 'Online Lab' ? '1px solid #1e293b' : 'none',
-                    color: active ? '#4ade80' : '#475569',
+                    color: labMode === mode ? '#4ade80' : '#475569',
                     padding: '4px 12px',
                     fontSize: '0.65rem',
-                    cursor: active ? 'default' : 'pointer',
+                    cursor: labMode === mode ? 'default' : 'pointer',
                     letterSpacing: '0.08em',
                     transition: 'all 0.2s ease',
                   }}
