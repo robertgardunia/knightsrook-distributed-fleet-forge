@@ -9,6 +9,75 @@ import type { FleetGraph as FleetGraphData, FleetNode } from './types/fleet';
 
 
 
+const ROLE_LABEL: Record<string, string> = {
+  'homebase': 'Home Base',
+  'station-controller': 'Station Controller',
+  'game-kiosk': 'Game Kiosk',
+  'info-kiosk': 'Info Kiosk',
+};
+
+function SearchBox({ nodes, onSelect, query, setQuery, open, setOpen }: {
+  nodes: FleetNode[];
+  onSelect: (n: FleetNode) => void;
+  query: string;
+  setQuery: (q: string) => void;
+  open: boolean;
+  setOpen: (o: boolean) => void;
+}) {
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  const results = query.trim().length === 0 ? [] : nodes.filter(n => {
+    const q = query.toLowerCase();
+    return n.name.toLowerCase().includes(q)
+      || n.role.toLowerCase().includes(q)
+      || n.id.toLowerCase().includes(q)
+      || (n.location ?? '').toLowerCase().includes(q);
+  }).slice(0, 10);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [setOpen]);
+
+  return (
+    <div ref={wrapRef} style={{ position: 'relative', width: '100%', maxWidth: 300 }}>
+      <span style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: '#475569', fontSize: '0.8rem', pointerEvents: 'none' }}>⌕</span>
+      <input
+        value={query}
+        placeholder="Search nodes…"
+        onChange={e => { setQuery(e.target.value); setOpen(true); }}
+        onFocus={() => { if (query) setOpen(true); }}
+        onKeyDown={e => { if (e.key === 'Escape') { setOpen(false); setQuery(''); } }}
+        style={{ width: '100%', background: '#061322', border: `1px solid ${open && results.length ? '#334155' : '#1e293b'}`, borderRadius: open && results.length ? '3px 3px 0 0' : 3, padding: '5px 10px 5px 26px', color: '#cbd5e1', fontSize: '0.7rem', outline: 'none', fontFamily: 'inherit', letterSpacing: '0.04em' }}
+      />
+      {open && results.length > 0 && (
+        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#061322', border: '1px solid #334155', borderTop: 'none', borderRadius: '0 0 3px 3px', zIndex: 100, maxHeight: 260, overflowY: 'auto' }}>
+          {results.map(n => (
+            <div
+              key={n.id}
+              onMouseDown={() => onSelect(n)}
+              style={{ padding: '7px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, borderBottom: '1px solid #0f172a' }}
+              onMouseEnter={e => (e.currentTarget.style.background = '#0d1f35')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+            >
+              <div style={{ width: 7, height: 7, borderRadius: '50%', background: n.color, flexShrink: 0 }} />
+              <div style={{ minWidth: 0 }}>
+                <div style={{ color: '#f1f5f9', fontSize: '0.72rem', fontWeight: 600 }}>{n.name}</div>
+                <div style={{ color: '#475569', fontSize: '0.62rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {ROLE_LABEL[n.role]}{n.location ? ` · ${n.location}` : ''}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
   useEffect(() => {
@@ -29,6 +98,8 @@ export default function App() {
   const [labBusy, setLabBusy] = useState(false);
   const [hSplit, setHSplit] = useState(50); // left col %
   const [vSplit, setVSplit] = useState(50); // top row %
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchOpen, setSearchOpen] = useState(false);
   const gridRef = useRef<HTMLDivElement>(null);
   const lastSelected = useRef<FleetNode | null>(null);
   if (selected) lastSelected.current = selected;
@@ -85,13 +156,7 @@ export default function App() {
 
         {/* Search */}
         <div style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
-          <div style={{ position: 'relative', width: '100%', maxWidth: 300 }}>
-            <span style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: '#475569', fontSize: '0.8rem', pointerEvents: 'none' }}>⌕</span>
-            <input
-              placeholder="Search nodes…"
-              style={{ width: '100%', background: '#061322', border: '1px solid #1e293b', borderRadius: 3, padding: '5px 10px 5px 26px', color: '#cbd5e1', fontSize: '0.7rem', outline: 'none', fontFamily: 'inherit', letterSpacing: '0.04em' }}
-            />
-          </div>
+          <SearchBox nodes={graph.nodes} onSelect={node => { setSelected(node); setSearchQuery(''); setSearchOpen(false); }} query={searchQuery} setQuery={setSearchQuery} open={searchOpen} setOpen={setSearchOpen} />
         </div>
 
         {/* Right controls */}
