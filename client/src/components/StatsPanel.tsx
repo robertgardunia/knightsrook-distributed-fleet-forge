@@ -67,6 +67,31 @@ function StatsView({ node, live }: { node: FleetNode; live?: NodeStats }) {
   );
 }
 
+// Derive the host-published port from node ID.
+// s{N}-game-{K} → 18N0K  (s1-game-1 → 18101)
+// s{N}-info-{K} → 18N5K  (s1-info-1 → 18151)
+function kioskPort(nodeId: string): number | null {
+  const m = nodeId.match(/^s(\d+)-(game|info)-(\d+)$/);
+  if (!m) return null;
+  const station = parseInt(m[1]);
+  const isInfo  = m[2] === 'info';
+  const num     = parseInt(m[3]);
+  return 18000 + station * 100 + (isInfo ? 50 : 0) + num;
+}
+
+function LiveKioskScreen({ node }: { node: FleetNode }) {
+  const port = kioskPort(node.id);
+  if (!port) return null;
+  return (
+    <iframe
+      src={`http://localhost:${port}`}
+      style={{ flex: 1, border: 'none', width: '100%', height: '100%', display: 'block', background: '#000' }}
+      title={node.id}
+      allow="autoplay"
+    />
+  );
+}
+
 const HEXGL_SCREENS = [
   '/games/hexgl-title.png',
   '/games/hexgl-gameover.jpg',
@@ -183,9 +208,9 @@ function LiveScreen({ node, live }: { node: FleetNode; live: NodeStats }) {
   );
 }
 
-function ScreenView({ node, live }: { node: FleetNode; live?: NodeStats }) {
-  if (node.role === 'game-kiosk') return <GameScreen node={node} />;
-  if (node.role === 'info-kiosk') return <InfoScreen node={node} />;
+function ScreenView({ node, live, isMock }: { node: FleetNode; live?: NodeStats; isMock?: boolean }) {
+  if (node.role === 'game-kiosk') return isMock ? <GameScreen node={node} /> : <LiveKioskScreen node={node} />;
+  if (node.role === 'info-kiosk') return isMock ? <InfoScreen node={node} /> : <LiveKioskScreen node={node} />;
   if (live) return <LiveScreen node={node} live={live} />;
   return <ControllerScreen node={node} />;
 }
@@ -241,7 +266,7 @@ export default function StatsPanel({ node, isMock }: { node: FleetNode; isMock?:
 
       <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
         {tab === 'stats'  && <StatsView  node={node} live={liveStats} />}
-        {tab === 'screen' && <ScreenView node={node} live={liveStats} />}
+        {tab === 'screen' && <ScreenView node={node} live={liveStats} isMock={isMock} />}
       </div>
     </div>
   );

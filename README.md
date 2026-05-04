@@ -44,7 +44,7 @@ Click any node in the fleet graph to open a resizable 2×2 panel layout. Drag th
 |---|---|---|
 | Upper-left | Monitor | Animated htop-style CPU/MEM/NET + process list. SSH button (stub). |
 | Upper-right | Fleet graph | Force-directed topology, shrinks to quadrant |
-| Lower-left | Stats/Screen | Two tabs: Stats (uptime, CPU, RAM, disk, net, ping, location, ID) and Screen (role-aware: game kiosks show HexGL screenshot, info kiosks cycle through simulator slides as a slideshow, controllers/homebase show system status) |
+| Lower-left | Stats/Screen | Two tabs: Stats (uptime, CPU, RAM, disk, net, ping, location, ID) and Screen (role-aware: in Online Lab, kiosks show a live iframe of the kiosk's nginx page; in Offline Demo, game kiosks show static HexGL screenshots and info kiosks cycle through simulator slides; controllers/homebase show system status) |
 | Lower-right | Logs/Shell | Two tabs: Logs (streaming journal output) and Shell (interactive bash session) |
 
 Click background or the ✕ button to return to full-screen graph.
