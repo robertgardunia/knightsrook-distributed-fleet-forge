@@ -7,7 +7,7 @@ export default defineConfig({
     port: 5300,
     proxy: {
       '/api': 'http://127.0.0.1:5020',
-      '/socket.io': { target: 'http://127.0.0.1:5020', ws: true, changeOrigin: true },
+      '/socket.io': 'http://127.0.0.1:5020',
     },
   },
 });
