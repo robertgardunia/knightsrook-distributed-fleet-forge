@@ -2,18 +2,21 @@ import express from 'express';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import cors from 'cors';
-import router from './routes/index.js';
+import { createRouter } from './routes/index.js';
 import { errorHandler } from './middleware/errorHandler.js';
+import type { FleetRegistry } from './lib/fleetRegistry.js';
 
-const app = express();
+export function createApp(registry: FleetRegistry) {
+  const app = express();
 
-app.use(helmet());
-app.use(morgan('dev'));
-app.use(cors());
-app.use(express.json());
+  app.use(helmet());
+  app.use(morgan('dev'));
+  app.use(cors());
+  app.use(express.json());
 
-app.use('/api', router);
+  app.use('/api', createRouter(registry));
 
-app.use(errorHandler);
+  app.use(errorHandler);
 
-export default app;
+  return app;
+}

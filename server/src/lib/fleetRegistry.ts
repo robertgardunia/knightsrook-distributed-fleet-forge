@@ -72,6 +72,11 @@ export class FleetRegistry {
 
   get size() { return this.agents.size; }
 
+  clear() {
+    this.agents.clear();
+    this.onChange();
+  }
+
   buildGraph(): FleetGraph {
     const nodes: FleetNode[] = [{
       id:     'homebase',

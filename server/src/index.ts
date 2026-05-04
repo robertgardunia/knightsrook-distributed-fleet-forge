@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
-import app from './app.js';
+import { createApp } from './app.js';
 import { buildMockFleet } from './lib/mockFleet.js';
 import { FleetRegistry } from './lib/fleetRegistry.js';
 import { streamLogs, openShell, type ShellHandle, streamStats, type NodeStats } from './lib/containerStreams.js';
@@ -9,12 +9,12 @@ import { streamLogs, openShell, type ShellHandle, streamStats, type NodeStats } 
 const PORT     = Number(process.env.PORT) || 5020;
 const USE_MOCK = process.env.USE_MOCK === 'true';
 
-const httpServer = createServer(app);
-const io = new Server(httpServer, { cors: { origin: '*' } });
-
 const registry = new FleetRegistry(() => {
-  if (!USE_MOCK) io.emit('fleet:graph', registry.buildGraph());
+  io.emit('fleet:graph', getGraph());
 });
+
+const httpServer = createServer(createApp(registry));
+const io = new Server(httpServer, { cors: { origin: '*' } });
 
 function getGraph() {
   const isMock = USE_MOCK || registry.size === 0;

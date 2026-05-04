@@ -1,8 +1,7 @@
 import { Router } from 'express';
 import { spawn } from 'child_process';
 import path from 'path';
-
-const router = Router();
+import type { FleetRegistry } from '../lib/fleetRegistry.js';
 
 // Project root is one level up from the server/ directory.
 const projectRoot = path.resolve(process.cwd(), '..');
@@ -16,26 +15,32 @@ function runCompose(args: string[]) {
   child.unref();
 }
 
-router.get('/health', (_req, res) => {
-  res.json({ success: true, data: { status: 'ok' }, error: undefined });
-});
+export function createRouter(registry: FleetRegistry) {
+  const router = Router();
 
-router.post('/chaos/start', (_req, res) => {
-  try {
-    runCompose(['up', '--build', '-d']);
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ success: false, error: String(err) });
-  }
-});
+  router.get('/health', (_req, res) => {
+    res.json({ success: true, data: { status: 'ok' }, error: undefined });
+  });
 
-router.post('/chaos/stop', (_req, res) => {
-  try {
-    runCompose(['down']);
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ success: false, error: String(err) });
-  }
-});
+  router.post('/chaos/start', (_req, res) => {
+    try {
+      registry.clear();
+      runCompose(['up', '--build', '-d']);
+      res.json({ success: true });
+    } catch (err) {
+      res.status(500).json({ success: false, error: String(err) });
+    }
+  });
 
-export default router;
+  router.post('/chaos/stop', (_req, res) => {
+    try {
+      registry.clear();
+      runCompose(['down']);
+      res.json({ success: true });
+    } catch (err) {
+      res.status(500).json({ success: false, error: String(err) });
+    }
+  });
+
+  return router;
+}
