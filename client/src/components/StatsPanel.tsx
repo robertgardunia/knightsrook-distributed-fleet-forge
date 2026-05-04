@@ -224,7 +224,7 @@ export default function StatsPanel({ node, isMock }: { node: FleetNode; isMock?:
 
   return (
     <div style={{ background: '#020c1b', display: 'flex', flexDirection: 'column', overflow: 'hidden', height: '100%', boxSizing: 'border-box' }}>
-      <div style={{ height: 34, background: '#0d1f35', borderBottom: '1px solid #1e293b', flexShrink: 0, display: 'flex', alignItems: 'center' }}>
+      <div style={{ height: 34, background: '#162d47', borderBottom: '1px solid #1e293b', flexShrink: 0, display: 'flex', alignItems: 'center' }}>
         {(['stats', 'screen'] as Tab[]).map(t => (
           <button
             key={t}

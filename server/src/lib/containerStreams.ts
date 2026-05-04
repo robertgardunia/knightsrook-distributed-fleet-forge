@@ -158,18 +158,21 @@ export async function streamStats(
         const sysDelta  = (r.cpu_stats?.system_cpu_usage ?? 0)
                         - (r.precpu_stats?.system_cpu_usage ?? 0);
         const numCpus   = r.cpu_stats?.online_cpus ?? 1;
-        const cpu = sysDelta > 0 ? Math.min(100, (cpuDelta / sysDelta) * numCpus * 100) : 0;
+        // Skip first frame — precpu_stats has no baseline yet so sysDelta=0
+        if (sysDelta === 0) continue;
+        const cpu = Math.min(100, (cpuDelta / sysDelta) * numCpus * 100);
 
         // Memory
-        const memUsed  = (r.memory_stats?.usage ?? 0) - (r.memory_stats?.stats?.cache ?? 0);
+        const memUsed  = Math.max(0, (r.memory_stats?.usage ?? 0) - (r.memory_stats?.stats?.cache ?? 0));
         const memTotal = r.memory_stats?.limit ?? 1;
 
-        // Network rates (bytes since last tick)
+        // Network rates (bytes/s since last tick)
         const nets    = Object.values(r.networks ?? {}) as { rx_bytes: number; tx_bytes: number }[];
         const netIn   = nets.reduce((s, n) => s + (n.rx_bytes ?? 0), 0);
         const netOut  = nets.reduce((s, n) => s + (n.tx_bytes ?? 0), 0);
-        const netInRate  = Math.max(0, netIn  - prevNetIn);
-        const netOutRate = Math.max(0, netOut - prevNetOut);
+        // Skip first net sample — prevNetIn/Out=0, so delta would be total bytes not a rate
+        const netInRate  = prevNetIn  > 0 ? Math.max(0, netIn  - prevNetIn)  : 0;
+        const netOutRate = prevNetOut > 0 ? Math.max(0, netOut - prevNetOut) : 0;
         prevNetIn  = netIn;
         prevNetOut = netOut;
 

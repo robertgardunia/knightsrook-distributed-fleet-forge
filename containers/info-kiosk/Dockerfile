@@ -1,7 +1,8 @@
 # Stage 1 — compile the fleet agent
 FROM node:20-alpine AS agent-build
 WORKDIR /build
-COPY containers/fleet-agent/package.json containers/fleet-agent/tsconfig.json containers/fleet-agent/agent.ts ./
+COPY containers/fleet-agent/package.json containers/fleet-agent/tsconfig.json ./
+COPY containers/info-kiosk/agent.ts ./agent.ts
 RUN npm install && npm run build
 
 # Stage 2 — runtime: nginx + Node agent + slideshow

@@ -18,6 +18,7 @@ const NODE_SIZE: Record<NodeRole, number> = {
 };
 
 const HEARTBEAT_TIMEOUT_MS = 15_000;
+const ALERT_THRESHOLD_MS   =  9_000;
 
 interface AgentRecord {
   id:       string;
@@ -26,6 +27,7 @@ interface AgentRecord {
   parentId: string | null;
   lastSeen: number;
   status:   NodeStatus;
+  alerting: boolean;
 }
 
 export class FleetRegistry {
@@ -46,6 +48,7 @@ export class FleetRegistry {
       parentId: data.parentId ?? null,
       lastSeen: Date.now(),
       status:   existing?.status ?? 'federation',
+      alerting: false,
     });
     console.log(`[registry] registered ${data.id} (${data.role})`);
     this.onChange();
@@ -54,11 +57,15 @@ export class FleetRegistry {
   heartbeat(id: string) {
     const agent = this.agents.get(id);
     if (!agent) return;
-    const wasDead = agent.status === 'dead';
+    const wasDead     = agent.status === 'dead';
+    const wasAlerting = agent.alerting;
     agent.lastSeen = Date.now();
+    agent.alerting = false;
     if (wasDead) {
       agent.status = 'federation';
       console.log(`[registry] ${id} recovered`);
+      this.onChange();
+    } else if (wasAlerting) {
       this.onChange();
     }
   }
@@ -90,12 +97,13 @@ export class FleetRegistry {
 
     for (const agent of this.agents.values()) {
       nodes.push({
-        id:     agent.id,
-        name:   agent.name,
-        role:   agent.role,
-        status: agent.status,
-        val:    NODE_SIZE[agent.role] ?? 3,
-        color:  STATUS_COLOR[agent.status],
+        id:       agent.id,
+        name:     agent.name,
+        role:     agent.role,
+        status:   agent.status,
+        val:      NODE_SIZE[agent.role] ?? 3,
+        color:    STATUS_COLOR[agent.status],
+        alerting: agent.alerting || undefined,
       });
       const parent = agent.parentId ?? 'homebase';
       links.push({ source: parent, target: agent.id });
@@ -108,9 +116,14 @@ export class FleetRegistry {
     const now = Date.now();
     let changed = false;
     for (const agent of this.agents.values()) {
-      if (agent.status !== 'dead' && now - agent.lastSeen > HEARTBEAT_TIMEOUT_MS) {
-        agent.status = 'dead';
+      const age = now - agent.lastSeen;
+      if (agent.status !== 'dead' && age > HEARTBEAT_TIMEOUT_MS) {
+        agent.status   = 'dead';
+        agent.alerting = false;
         console.log(`[registry] ${agent.id} timed out → dead`);
+        changed = true;
+      } else if (agent.status !== 'dead' && age > ALERT_THRESHOLD_MS && !agent.alerting) {
+        agent.alerting = true;
         changed = true;
       }
     }

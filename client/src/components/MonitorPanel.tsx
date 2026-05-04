@@ -61,9 +61,22 @@ export default function MonitorPanel({ node, isMock }: { node: FleetNode; isMock
 
   return (
     <div style={{ background: '#020c1b', borderRight: '1px solid #1e293b', borderBottom: '1px solid #1e293b', display: 'flex', flexDirection: 'column', overflow: 'hidden', height: '100%', boxSizing: 'border-box' }}>
-      <div style={{ height: 34, padding: '0 14px', borderBottom: '1px solid #1e293b', background: '#0d1f35', display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-        <span style={{ color: '#475569', fontSize: '0.68rem', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
-          Monitor · {node.name}
+      <div style={{ height: 34, background: '#162d47', borderBottom: '1px solid #1e293b', flexShrink: 0, display: 'flex', alignItems: 'center' }}>
+        <span style={{
+          borderBottom: '2px solid #4ade80',
+          color: '#f1f5f9',
+          padding: '0 14px',
+          height: '100%',
+          display: 'inline-flex',
+          alignItems: 'center',
+          fontSize: '0.68rem',
+          letterSpacing: '0.1em',
+          textTransform: 'uppercase',
+        }}>
+          Monitor
+        </span>
+        <span style={{ marginLeft: 'auto', paddingRight: 12, color: '#334155', fontSize: '0.62rem' }}>
+          {node.name}
         </span>
       </div>
       <pre style={{ flex: 1, minHeight: 0, margin: 0, padding: '12px 14px', color: '#4ade80', fontSize: '0.7rem', fontFamily: '"Cascadia Code", "Fira Code", monospace', lineHeight: 1.7, overflow: 'hidden', whiteSpace: 'pre' }}>

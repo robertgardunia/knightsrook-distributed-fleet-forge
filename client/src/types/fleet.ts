@@ -9,6 +9,7 @@ export interface FleetNode {
   val: number;
   color: string;
   location?: string;
+  alerting?: boolean;
 }
 
 export interface FleetLink {

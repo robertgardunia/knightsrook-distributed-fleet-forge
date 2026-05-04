@@ -130,6 +130,15 @@ const FleetGraph = forwardRef<FleetGraphHandle, Props>(function FleetGraph({ gra
             return `rgb(${r},${g},${b})`;
           };
 
+          if (n.alerting) {
+            const pulse = 0.4 + 0.4 * Math.sin(Date.now() / 350);
+            ctx.beginPath();
+            ctx.arc(n.x, n.y, radius + 7 / globalScale, 0, 2 * Math.PI);
+            ctx.strokeStyle = `rgba(251,146,60,${pulse})`;
+            ctx.lineWidth = 2.5 / globalScale;
+            ctx.stroke();
+          }
+
           if (isSelected) {
             ctx.beginPath();
             ctx.arc(n.x, n.y, radius + 5 / globalScale, 0, 2 * Math.PI);
