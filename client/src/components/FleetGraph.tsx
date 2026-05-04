@@ -22,7 +22,7 @@ export default function FleetGraph({ graph, onNodeSelect, selectedNodeId }: Prop
   const containerRef = useRef<HTMLDivElement>(null);
   const fgRef = useRef<FGInstance>(null);
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
-  const [charge, setCharge] = useState(-120);
+  const charge = -10;
   const manualZoom = useRef(false);
   useEffect(() => {
     if (!containerRef.current) return;
@@ -48,7 +48,7 @@ export default function FleetGraph({ graph, onNodeSelect, selectedNodeId }: Prop
       return src === 'homebase' ? 80 : 40;
     });
     fgRef.current.d3ReheatSimulation();
-  }, [graph.nodes.length, charge]);
+  }, [graph.nodes.length]);
 
   // Zoom to fit when selection is cleared
   useEffect(() => {
@@ -129,23 +129,6 @@ export default function FleetGraph({ graph, onNodeSelect, selectedNodeId }: Prop
         nodeCanvasObjectMode={() => 'replace'}
       />
 
-      {/* Force tuning overlay */}
-      <div style={{
-        position: 'absolute', bottom: 10, left: 10,
-        display: 'flex', alignItems: 'center', gap: 8,
-        background: '#0d1f3599', backdropFilter: 'blur(4px)',
-        border: '1px solid #1e293b', borderRadius: 4,
-        padding: '4px 10px', pointerEvents: 'auto',
-      }}>
-        <span style={{ color: '#475569', fontSize: '0.6rem', letterSpacing: '0.08em', userSelect: 'none' }}>CHARGE</span>
-        <input
-          type="range" min={-400} max={100} step={5}
-          value={charge}
-          onChange={e => setCharge(Number(e.target.value))}
-          style={{ width: 90, accentColor: '#4ade80', cursor: 'pointer' }}
-        />
-        <span style={{ color: '#64748b', fontSize: '0.6rem', width: 32, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{charge}</span>
-      </div>
     </div>
   );
 }
