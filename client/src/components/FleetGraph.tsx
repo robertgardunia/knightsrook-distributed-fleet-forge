@@ -139,7 +139,7 @@ export default function FleetGraph({ graph, onNodeSelect, selectedNodeId }: Prop
       }}>
         <span style={{ color: '#475569', fontSize: '0.6rem', letterSpacing: '0.08em', userSelect: 'none' }}>CHARGE</span>
         <input
-          type="range" min={-400} max={-5} step={5}
+          type="range" min={-400} max={100} step={5}
           value={charge}
           onChange={e => setCharge(Number(e.target.value))}
           style={{ width: 90, accentColor: '#4ade80', cursor: 'pointer' }}
