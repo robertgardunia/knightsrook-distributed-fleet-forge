@@ -21,6 +21,9 @@ Distributed Fleet Forge: A containerized chaos lab where sovereign-tier kiosk fl
 | `node:shell:output` | server → client | PTY output bytes |
 | `node:shell:ready` | server → client | Shell is open and ready |
 | `node:shell:error` | server → client | Shell error (e.g. Docker unavailable) |
+| `node:stats:subscribe` | client → server | Start streaming `docker stats` for a node |
+| `node:stats:unsubscribe` | client → server | Stop stats stream |
+| `node:stats:data` | server → client | Stats snapshot (cpu, mem, net rates, uptime, process list) |
 
 ## Branding
 

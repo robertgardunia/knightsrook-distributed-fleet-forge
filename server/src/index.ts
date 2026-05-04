@@ -4,7 +4,7 @@ import { Server } from 'socket.io';
 import app from './app.js';
 import { buildMockFleet } from './lib/mockFleet.js';
 import { FleetRegistry } from './lib/fleetRegistry.js';
-import { streamLogs, openShell, type ShellHandle } from './lib/containerStreams.js';
+import { streamLogs, openShell, type ShellHandle, streamStats, type NodeStats } from './lib/containerStreams.js';
 
 const PORT     = Number(process.env.PORT) || 5020;
 const USE_MOCK = process.env.USE_MOCK === 'true';
@@ -53,6 +53,23 @@ io.on('connection', (socket) => {
 
   socket.on('node:logs:unsubscribe', ({ nodeId }: { nodeId: string }) => {
     abort(`logs:${nodeId}`);
+  });
+
+  // ── Stats streaming ──────────────────────────────────────────────────────────
+  socket.on('node:stats:subscribe', async ({ nodeId }: { nodeId: string }) => {
+    const key = `stats:${nodeId}`;
+    abort(key);
+    const ac = new AbortController();
+    aborts.set(key, ac);
+    try {
+      await streamStats(nodeId, (stats: NodeStats) => socket.emit('node:stats:data', { nodeId, stats }), ac.signal);
+    } catch (err) {
+      socket.emit('node:stats:error', { nodeId, message: String(err) });
+    }
+  });
+
+  socket.on('node:stats:unsubscribe', ({ nodeId }: { nodeId: string }) => {
+    abort(`stats:${nodeId}`);
   });
 
   // ── Shell ──────────────────────────────────────────────────────────────────

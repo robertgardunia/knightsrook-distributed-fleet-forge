@@ -26,7 +26,9 @@
       "PowerShell(New-Item -ItemType Directory -Force \"d:\\\\workspace-knightsrook\\\\knightsrook-distributed-fleet-forge\\\\client\\\\public\")",
       "PowerShell(Copy-Item \"C:\\\\Users\\\\skyth\\\\AppData\\\\Local\\\\Temp\\\\logo.png\" \"d:\\\\workspace-knightsrook\\\\knightsrook-distributed-fleet-forge\\\\client\\\\public\\\\logo.png\")",
       "PowerShell(Copy-Item \"C:\\\\Users\\\\skyth\\\\AppData\\\\Local\\\\Temp\\\\favicon.ico\" \"d:\\\\workspace-knightsrook\\\\knightsrook-distributed-fleet-forge\\\\client\\\\public\\\\favicon.ico\")",
-      "Bash(pnpm --filter client add d3-force-3d)"
+      "Bash(pnpm --filter client add d3-force-3d)",
+      "Bash(echo \"server exit: $?\")",
+      "Bash(echo \"client exit: $?\")"
     ]
   }
 }

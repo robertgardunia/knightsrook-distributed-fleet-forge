@@ -1,44 +1,63 @@
 import { useEffect, useState } from 'react';
-import type { FleetNode } from '../types/fleet';
+import { socket } from '../socket';
+import type { FleetNode, NodeStats } from '../types/fleet';
 
 function bar(pct: number, width = 18) {
   const filled = Math.round((pct / 100) * width);
   return '[' + '█'.repeat(filled) + '░'.repeat(width - filled) + ']';
 }
 
-interface Stats {
-  cpu: number;
-  mem: number;
-  netIn: number;
-  netOut: number;
-  processes: { pid: number; cpu: number; mem: number; cmd: string }[];
-}
-
-function mockStats(nodeId: string): Stats {
+function mockStats(nodeId: string): NodeStats {
   const seed = nodeId.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
   const jitter = () => Math.random() * 8 - 4;
   return {
-    cpu: Math.min(95, Math.max(5, (seed % 40) + 20 + jitter())),
-    mem: Math.min(90, Math.max(10, (seed % 30) + 25 + jitter() * 0.5)),
-    netIn: 0.4 + Math.random() * 2.5,
-    netOut: 0.1 + Math.random() * 0.9,
+    cpu:       Math.min(95, Math.max(5, (seed % 40) + 20 + jitter())),
+    memUsed:   ((seed % 300) + 380) * 1024 * 1024,
+    memTotal:  1536 * 1024 * 1024,
+    netInRate: (0.4 + Math.random() * 2.5) * 1024,
+    netOutRate:(0.1 + Math.random() * 0.9) * 1024,
+    uptime:    (seed % 7) * 86400 + (seed * 3 % 24) * 3600,
     processes: [
-      { pid: 1000 + (seed % 99), cpu: +(Math.random() * 0.4).toFixed(1), mem: 1.1, cmd: 'node dist/index' },
-      { pid: 1100 + (seed % 99), cpu: +(Math.random() * 0.2).toFixed(1), mem: 0.8, cmd: 'tailscaled' },
-      { pid: 1200 + (seed % 99), cpu: 0.0, mem: 0.5, cmd: 'netdata' },
-      { pid: 1300 + (seed % 99), cpu: 0.0, mem: 0.3, cmd: 'avahi-daemon' },
+      { pid: String(1000 + (seed % 99)), cmd: 'node dist/index' },
+      { pid: String(1100 + (seed % 99)), cmd: 'tailscaled' },
+      { pid: String(1200 + (seed % 99)), cmd: 'netdata' },
+      { pid: String(1300 + (seed % 99)), cmd: 'avahi-daemon' },
     ],
   };
 }
 
-export default function MonitorPanel({ node }: { node: FleetNode }) {
-  const [stats, setStats] = useState<Stats>(() => mockStats(node.id));
+function fmt(bytes: number) {
+  if (bytes < 1024) return bytes.toFixed(0) + ' B/s';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB/s';
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB/s';
+}
+
+function fmtMem(bytes: number) {
+  return (bytes / (1024 * 1024)).toFixed(0) + ' MB';
+}
+
+export default function MonitorPanel({ node, isMock }: { node: FleetNode; isMock?: boolean }) {
+  const [stats, setStats] = useState<NodeStats>(() => mockStats(node.id));
 
   useEffect(() => {
     setStats(mockStats(node.id));
-    const id = setInterval(() => setStats(mockStats(node.id)), 2000);
-    return () => clearInterval(id);
-  }, [node.id]);
+    if (isMock !== false) {
+      const id = setInterval(() => setStats(mockStats(node.id)), 2000);
+      return () => clearInterval(id);
+    }
+    // Online mode — subscribe to real stats
+    socket.emit('node:stats:subscribe', { nodeId: node.id });
+    const onData = ({ nodeId, stats: s }: { nodeId: string; stats: NodeStats }) => {
+      if (nodeId === node.id) setStats(s);
+    };
+    socket.on('node:stats:data', onData);
+    return () => {
+      socket.emit('node:stats:unsubscribe', { nodeId: node.id });
+      socket.off('node:stats:data', onData);
+    };
+  }, [node.id, isMock]);
+
+  const memPct = Math.min(100, (stats.memUsed / stats.memTotal) * 100);
 
   return (
     <div style={{ background: '#020c1b', borderRight: '1px solid #1e293b', borderBottom: '1px solid #1e293b', display: 'flex', flexDirection: 'column', overflow: 'hidden', height: '100%', boxSizing: 'border-box' }}>
@@ -49,12 +68,12 @@ export default function MonitorPanel({ node }: { node: FleetNode }) {
       </div>
       <pre style={{ flex: 1, minHeight: 0, margin: 0, padding: '12px 14px', color: '#4ade80', fontSize: '0.7rem', fontFamily: '"Cascadia Code", "Fira Code", monospace', lineHeight: 1.7, overflow: 'hidden', whiteSpace: 'pre' }}>
 {`  CPU  ${bar(stats.cpu)} ${stats.cpu.toFixed(0).padStart(2)}%
-  MEM  ${bar(stats.mem)} ${stats.mem.toFixed(0).padStart(2)}%
-  NET  ↓ ${stats.netIn.toFixed(1)} KB/s  ↑ ${stats.netOut.toFixed(1)} KB/s
+  MEM  ${bar(memPct)} ${memPct.toFixed(0).padStart(2)}%
+  NET  ↓ ${fmt(stats.netInRate)}  ↑ ${fmt(stats.netOutRate)}
 
-  ${'PID'.padEnd(6)} ${'CPU%'.padStart(5)} ${'MEM%'.padStart(5)}  CMD
+  ${'PID'.padEnd(6)} CMD
 ${stats.processes.map(p =>
-  `  ${String(p.pid).padEnd(6)} ${p.cpu.toFixed(1).padStart(5)} ${p.mem.toFixed(1).padStart(5)}  ${p.cmd}`
+  `  ${p.pid.padEnd(6)} ${p.cmd}`
 ).join('\n')}`}
       </pre>
     </div>

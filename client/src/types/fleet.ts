@@ -20,3 +20,13 @@ export interface FleetGraph {
   links: FleetLink[];
   isMock?: boolean;
 }
+
+export interface NodeStats {
+  cpu: number;
+  memUsed: number;
+  memTotal: number;
+  netInRate: number;
+  netOutRate: number;
+  uptime: number;
+  processes: { pid: string; cmd: string }[];
+}

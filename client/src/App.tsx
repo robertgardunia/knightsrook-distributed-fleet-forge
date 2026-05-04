@@ -138,13 +138,13 @@ export default function App() {
           {open && panelNode ? (
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               <div style={{ height: '50vh', flexShrink: 0, borderBottom: '1px solid #1e293b' }}>
-                <MonitorPanel node={panelNode} />
+                <MonitorPanel node={panelNode} isMock={graph.isMock !== false} />
               </div>
               <div style={{ height: '50vh', flexShrink: 0, borderBottom: '1px solid #1e293b' }}>
                 <FleetGraph graph={graph} onNodeSelect={setSelected} selectedNodeId={selected?.id} />
               </div>
               <div style={{ height: '50vh', flexShrink: 0, borderBottom: '1px solid #1e293b' }}>
-                <StatsPanel node={panelNode} />
+                <StatsPanel node={panelNode} isMock={graph.isMock !== false} />
               </div>
               <div style={{ height: '50vh', flexShrink: 0 }}>
                 <ScreenPanel node={panelNode} isMock={graph.isMock !== false} />
@@ -173,7 +173,7 @@ export default function App() {
               borderBottom: '1px solid #1e293b',
               boxSizing: 'border-box',
             }}>
-              {panelNode && <MonitorPanel node={panelNode} />}
+              {panelNode && <MonitorPanel node={panelNode} isMock={graph.isMock !== false} />}
             </div>
 
             {/* Upper-right: Fleet Graph — always mounted */}
@@ -198,7 +198,7 @@ export default function App() {
               borderRight: '1px solid #1e293b',
               boxSizing: 'border-box',
             }}>
-              {panelNode && <StatsPanel node={panelNode} />}
+              {panelNode && <StatsPanel node={panelNode} isMock={graph.isMock !== false} />}
             </div>
 
             {/* Lower-right: Screen/Logs */}
