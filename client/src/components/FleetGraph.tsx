@@ -77,6 +77,7 @@ export default function FleetGraph({ graph, onNodeSelect, selectedNodeId }: Prop
           return `${n.name} · ${n.role} · ${n.status}`;
         }}
         linkColor={() => '#ffffff22'}
+        linkCurvature={0.3}
         linkDirectionalParticles={2}
         linkDirectionalParticleSpeed={0.0015}
         linkDirectionalParticleWidth={1.5}
@@ -138,7 +139,7 @@ export default function FleetGraph({ graph, onNodeSelect, selectedNodeId }: Prop
       }}>
         <span style={{ color: '#475569', fontSize: '0.6rem', letterSpacing: '0.08em', userSelect: 'none' }}>CHARGE</span>
         <input
-          type="range" min={-400} max={-20} step={10}
+          type="range" min={-400} max={-5} step={5}
           value={charge}
           onChange={e => setCharge(Number(e.target.value))}
           style={{ width: 90, accentColor: '#4ade80', cursor: 'pointer' }}
