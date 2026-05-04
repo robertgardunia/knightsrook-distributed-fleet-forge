@@ -10,6 +10,17 @@ Distributed Fleet Forge: A containerized chaos lab where sovereign-tier kiosk fl
 | `fleet:request` | client → server | Request/re-request fleet data |
 | `agent:register` | agent → server | Agent announces itself (`id`, `name`, `role`, `parentId`) |
 | `agent:heartbeat` | agent → server | Keepalive every 5s — node goes `dead` after 15s silence |
+| `node:logs:subscribe` | client → server | Start streaming `docker logs -f` for a node |
+| `node:logs:unsubscribe` | client → server | Stop log stream |
+| `node:logs:line` | server → client | Single log line with timestamp |
+| `node:logs:error` | server → client | Log stream error (e.g. container not found) |
+| `node:shell:open` | client → server | Open PTY shell (`docker exec -it /bin/sh`) |
+| `node:shell:input` | client → server | Keystrokes to shell stdin |
+| `node:shell:resize` | client → server | Terminal resize (cols × rows) |
+| `node:shell:close` | client → server | Close shell |
+| `node:shell:output` | server → client | PTY output bytes |
+| `node:shell:ready` | server → client | Shell is open and ready |
+| `node:shell:error` | server → client | Shell error (e.g. Docker unavailable) |
 
 ## Stack
 

@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(cd \"d:\\\\workspace-knightsrook\\\\knightsrook-distributed-fleet-forge\"; Get-ChildItem -Recurse -Depth 3 | Select-Object FullName | ForEach-Object { $_.FullName -replace [regex]::Escape\\(\\(pwd\\).Path\\), \".\" })",
+      "Bash(pnpm add *)",
+      "PowerShell(npm list -g pnpm --depth=0 2>$null)",
+      "PowerShell(cmd /c \"pnpm --version\" 2>&1)",
+      "PowerShell(cmd /c \"npm --version\" 2>&1)",
+      "PowerShell(cmd /c \"node --version\" 2>&1)",
+      "PowerShell(cmd /c \"dir d:\\\\workspace-knightsrook\\\\knightsrook-distributed-fleet-forge\\\\pnpm-lock.yaml\" 2>&1)",
+      "PowerShell(cmd /c \"npm install -g pnpm\" 2>&1)",
+      "PowerShell(cmd /c \"cd d:\\\\workspace-knightsrook\\\\knightsrook-distributed-fleet-forge\\\\server && pnpm add socket.io\" 2>&1)",
+      "PowerShell(cmd /c \"cd d:\\\\workspace-knightsrook\\\\knightsrook-distributed-fleet-forge\\\\client && pnpm add react-force-graph-2d socket.io-client\" 2>&1)",
+      "PowerShell(cmd /c \"cd d:\\\\workspace-knightsrook\\\\knightsrook-distributed-fleet-forge && pnpm dev\" 2>&1)",
+      "PowerShell(cmd /c \"cd d:\\\\workspace-knightsrook\\\\knightsrook-distributed-fleet-forge\\\\server && pnpm exec tsc --noEmit\" 2>&1)",
+      "PowerShell(cmd /c \"cd d:\\\\workspace-knightsrook\\\\knightsrook-distributed-fleet-forge\\\\client && pnpm exec tsc --noEmit\" 2>&1)",
+      "Bash(cmd /c \"pnpm exec tsc --noEmit 2>&1\")",
+      "Bash(cmd.exe /c \"pnpm add dockerode && pnpm add -D @types/dockerode\")",
+      "Bash(cmd.exe /c \"pnpm add @xterm/xterm @xterm/addon-fit\")",
+      "Bash(cmd.exe /c \"pnpm add dockerode @types/dockerode\")"
+    ]
+  }
+}

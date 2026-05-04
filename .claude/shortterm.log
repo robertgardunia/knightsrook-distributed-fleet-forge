@@ -1,0 +1,5 @@
+2026-05-03T25:05:00Z|knightsrook-distributed-fleet-forge|client/src/App.tsx|Match app header color to panel headers (#0d1f35)|UI consistency|Awaiting next task
+2026-05-03T25:10:00Z|knightsrook-distributed-fleet-forge|client/src/App.tsx|Expand header to 52px with search bar and nav/login stubs|Header redesign|Awaiting next task
+2026-05-03T25:15:00Z|knightsrook-distributed-fleet-forge|client/index.html,client/src/App.tsx|Use Play font for app title|Applied Google font|Awaiting next task
+2026-05-03T25:20:00Z|knightsrook-distributed-fleet-forge|client/src/App.tsx,client/src/components/*.tsx,client/src/index.css|Play font globally, monospace for SSH panel/htop bars|Font hierarchy refinement|Awaiting next task
+2026-05-03T25:25:00Z|knightsrook-distributed-fleet-forge|chaos lab scaffold|fleet-agent+station-controller relay+FleetRegistry|Docker chaos env|Awaiting next task

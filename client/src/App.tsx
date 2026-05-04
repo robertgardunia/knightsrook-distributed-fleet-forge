@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { io } from 'socket.io-client';
+import { socket } from './socket';
 import FleetGraph from './components/FleetGraph';
 import Sidebar from './components/Sidebar';
 import MonitorPanel from './components/MonitorPanel';
@@ -7,7 +7,7 @@ import StatsPanel from './components/StatsPanel';
 import ScreenPanel from './components/ScreenPanel';
 import type { FleetGraph as FleetGraphData, FleetNode } from './types/fleet';
 
-const socket = io();
+
 
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);

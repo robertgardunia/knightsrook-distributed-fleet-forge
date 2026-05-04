@@ -7,7 +7,9 @@
     "start": "node dist/index.js"
   },
   "dependencies": {
+    "@types/dockerode": "^4.0.1",
     "cors": "^2.8.5",
+    "dockerode": "^5.0.0",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "helmet": "^7.1.0",
