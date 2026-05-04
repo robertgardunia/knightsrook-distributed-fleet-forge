@@ -23,8 +23,6 @@ export default function FleetGraph({ graph, onNodeSelect, selectedNodeId }: Prop
   const fgRef = useRef<FGInstance>(null);
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
   const manualZoom = useRef(false);
-  const forcesApplied = useRef(false);
-
   useEffect(() => {
     if (!containerRef.current) return;
     const observer = new ResizeObserver((entries) => {
@@ -40,12 +38,14 @@ export default function FleetGraph({ graph, onNodeSelect, selectedNodeId }: Prop
     return () => { document.body.style.cursor = 'default'; };
   }, []);
 
-  // Spread kiosks out with stronger repulsion once graph data arrives
+  // Tune forces whenever graph data changes so station clusters don't overlap
   useEffect(() => {
-    if (!graph.nodes.length || !fgRef.current || forcesApplied.current) return;
-    forcesApplied.current = true;
-    fgRef.current.d3Force('charge').strength(-45);
-    fgRef.current.d3Force('link').distance(35);
+    if (!graph.nodes.length || !fgRef.current) return;
+    fgRef.current.d3Force('charge').strength(-280);
+    fgRef.current.d3Force('link').distance((link: { source: { id?: string } | string }) => {
+      const src = typeof link.source === 'object' ? link.source.id : link.source;
+      return src === 'homebase' ? 130 : 60;
+    });
   }, [graph.nodes.length]);
 
   // Zoom to fit when selection is cleared
@@ -61,8 +61,8 @@ export default function FleetGraph({ graph, onNodeSelect, selectedNodeId }: Prop
       <ForceGraph2D
         ref={fgRef}
         graphData={graph}
-        warmupTicks={200}
-        cooldownTime={2000}
+        warmupTicks={400}
+        cooldownTime={3000}
         onEngineStop={() => {
           if (!manualZoom.current) fgRef.current?.zoomToFit(400, 10);
         }}
