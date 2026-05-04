@@ -1,5 +1,5 @@
-2026-05-03T25:15:00Z|knightsrook-distributed-fleet-forge|client/index.html,client/src/App.tsx|Use Play font for app title|Applied Google font|Awaiting next task
-2026-05-03T25:20:00Z|knightsrook-distributed-fleet-forge|client/src/App.tsx,client/src/components/*.tsx,client/src/index.css|Play font globally, monospace for SSH panel/htop bars|Font hierarchy refinement|Awaiting next task
-2026-05-03T25:25:00Z|knightsrook-distributed-fleet-forge|chaos lab scaffold|fleet-agent+station-controller relay+FleetRegistry|Docker chaos env|Awaiting next task
-2026-05-03T25:30:00Z|knightsrook-distributed-fleet-forge|server/src/index.ts,server/src/lib/containerStreams.ts,client/src/App.tsx,client/src/components/ScreenPanel.tsx,client/src/socket.ts|Real logs+shell via dockerode+xterm.js|WS streams for container attach|Awaiting next task
-2026-05-03T25:35:00Z|knightsrook-distributed-fleet-forge|README.md,client/src/App.tsx,client/src/types/fleet.ts,server/src/index.ts,server/src/routes/index.ts|Start/Stop button in header for chaos lab|Fleet control UI|Awaiting next task
+2026-05-03T26:30:00Z|knightsrook-distributed-fleet-forge|client/src/components/FleetGraph.tsx|kiosk font 80%, dim unselected nodes on selection|Font size reduced, opacity dimming on hover|Awaiting next task
+2026-05-03T26:35:00Z|knightsrook-distributed-fleet-forge|README.md,client/src/App.tsx|Replace Start/Stop with Offline Demo/Start Lab toggle|Replaced button with mode toggle|Awaiting next task
+2026-05-03T26:40:00Z|knightsrook-distributed-fleet-forge|README.md,client/src/App.tsx|rename: Start Lab -> Online Lab|Button text updated|Awaiting next task
+2026-05-03T26:45:00Z|knightsrook-distributed-fleet-forge|client/src/App.tsx,client/src/components/ScreenPanel.tsx|Show offline placeholder in ScreenPanel when isMock|Added conditional rendering for mock mode|Awaiting next task
+2026-05-03T26:50:00Z|knightsrook-distributed-fleet-forge|client/src/components/ScreenPanel.tsx|Demo logs + interactive shell in offline mode|Added log output & shell input in mock mode|Awaiting next task
