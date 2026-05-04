@@ -8,6 +8,7 @@ export interface FleetNode {
   status: NodeStatus;
   val: number;
   color: string;
+  location?: string;
 }
 
 export interface FleetLink {
@@ -34,6 +35,17 @@ const NODE_SIZE: Record<NodeRole, number> = {
   'info-kiosk':          3,
 };
 
+const STATION_VENUES = [
+  'Main Hall',
+  'East Pavilion',
+  'West Wing',
+  'North Atrium',
+  'South Concourse',
+  'Grand Ballroom',
+  'Exhibit Hall B',
+  'Rooftop Terrace',
+];
+
 export function buildMockFleet(stationCount = 4): FleetGraph {
   const nodes: FleetNode[] = [];
   const links: FleetLink[] = [];
@@ -45,10 +57,12 @@ export function buildMockFleet(stationCount = 4): FleetGraph {
     status: 'federation',
     val: NODE_SIZE['homebase'],
     color: STATUS_COLOR['federation'],
+    location: 'Operations Center',
   });
 
   for (let s = 1; s <= stationCount; s++) {
     const stationId = `station-${s}`;
+    const venue = STATION_VENUES[(s - 1) % STATION_VENUES.length];
     nodes.push({
       id: stationId,
       name: `S${s}`,
@@ -56,6 +70,7 @@ export function buildMockFleet(stationCount = 4): FleetGraph {
       status: 'federation',
       val: NODE_SIZE['station-controller'],
       color: STATUS_COLOR['federation'],
+      location: venue,
     });
     links.push({ source: 'homebase', target: stationId });
 
@@ -68,6 +83,7 @@ export function buildMockFleet(stationCount = 4): FleetGraph {
         status: 'federation',
         val: NODE_SIZE['game-kiosk'],
         color: STATUS_COLOR['federation'],
+        location: `${venue} · Bay G${k}`,
       });
       links.push({ source: stationId, target: kioskId });
     }
@@ -81,6 +97,7 @@ export function buildMockFleet(stationCount = 4): FleetGraph {
         status: 'federation',
         val: NODE_SIZE['info-kiosk'],
         color: STATUS_COLOR['federation'],
+        location: `${venue} · Bay I${i}`,
       });
       links.push({ source: stationId, target: infoId });
     }

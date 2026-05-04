@@ -9,3 +9,26 @@ html, body, #root {
   background: #0f172a;
   font-family: 'Play', sans-serif;
 }
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0a1628;
+}
+::-webkit-scrollbar-thumb {
+  background: #1e3a5f;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #2d5080;
+}
+::-webkit-scrollbar-corner {
+  background: #0a1628;
+}
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #1e3a5f #0a1628;
+}

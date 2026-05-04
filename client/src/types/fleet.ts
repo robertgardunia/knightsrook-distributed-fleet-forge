@@ -8,6 +8,7 @@ export interface FleetNode {
   status: NodeStatus;
   val: number;
   color: string;
+  location?: string;
 }
 
 export interface FleetLink {

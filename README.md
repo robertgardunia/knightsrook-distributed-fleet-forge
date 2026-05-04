@@ -38,13 +38,13 @@ Distributed Fleet Forge: A containerized chaos lab where sovereign-tier kiosk fl
 
 ## Dashboard
 
-Click any node in the fleet graph to open a 2×2 panel layout:
+Click any node in the fleet graph to open a resizable 2×2 panel layout. Drag the center vertical or horizontal divider to resize quadrants.
 
 | Quadrant | Panel | Content |
 |---|---|---|
 | Upper-left | Monitor | Animated htop-style CPU/MEM/NET + process list. SSH button (stub). |
 | Upper-right | Fleet graph | Force-directed topology, shrinks to quadrant |
-| Lower-left | Stats/Screen | Two tabs: Stats (uptime, CPU, RAM, disk, net, ping, ID) and Screen (role-aware: game kiosks show arcade display, info kiosks show event schedule, controllers/homebase show system status) |
+| Lower-left | Stats/Screen | Two tabs: Stats (uptime, CPU, RAM, disk, net, ping, location, ID) and Screen (role-aware: game kiosks show arcade display, info kiosks show event schedule, controllers/homebase show system status) |
 | Lower-right | Logs/Shell | Two tabs: Logs (streaming journal output) and Shell (interactive bash session) |
 
 Click background or the ✕ button to return to full-screen graph.

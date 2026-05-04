@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { socket } from './socket';
 import FleetGraph from './components/FleetGraph';
 import Sidebar from './components/Sidebar';
@@ -27,11 +27,40 @@ export default function App() {
   const [graph, setGraph] = useState<FleetGraphData>({ nodes: [], links: [] });
   const [selected, setSelected] = useState<FleetNode | null>(null);
   const [labBusy, setLabBusy] = useState(false);
+  const [hSplit, setHSplit] = useState(50); // left col %
+  const [vSplit, setVSplit] = useState(50); // top row %
+  const gridRef = useRef<HTMLDivElement>(null);
   const lastSelected = useRef<FleetNode | null>(null);
   if (selected) lastSelected.current = selected;
   const panelNode = selected ?? lastSelected.current;
   const open = selected !== null;
   const isMobile = useIsMobile();
+
+  const startHDrag = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    const onMove = (ev: MouseEvent) => {
+      if (!gridRef.current) return;
+      const rect = gridRef.current.getBoundingClientRect();
+      const pct = ((ev.clientX - rect.left) / rect.width) * 100;
+      setHSplit(Math.min(80, Math.max(20, pct)));
+    };
+    const onUp = () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  }, []);
+
+  const startVDrag = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    const onMove = (ev: MouseEvent) => {
+      if (!gridRef.current) return;
+      const rect = gridRef.current.getBoundingClientRect();
+      const pct = ((ev.clientY - rect.top) / rect.height) * 100;
+      setVSplit(Math.min(80, Math.max(20, pct)));
+    };
+    const onUp = () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  }, []);
 
   useEffect(() => {
     const requestGraph = () => socket.emit('fleet:request');
@@ -160,14 +189,15 @@ export default function App() {
         /* ── Desktop: absolute 2×2 grid ── */
         <div style={{ flex: 1, minHeight: 0, display: 'flex', overflow: 'hidden' }}>
 
-          <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
+          <div ref={gridRef} style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
 
             {/* Upper-left: Monitor */}
             <div style={{
-              position: 'absolute', top: 0, left: 0, width: '50%', height: '50%',
+              position: 'absolute', top: 0, left: 0,
+              width: `${hSplit}%`, height: `${vSplit}%`,
               opacity: open ? 1 : 0,
               transform: open ? 'none' : 'translateX(-14px)',
-              transition: 'opacity 0.3s ease, transform 0.3s ease',
+              transition: open ? 'opacity 0.3s ease, transform 0.3s ease' : 'opacity 0.3s ease, transform 0.3s ease',
               pointerEvents: open ? 'auto' : 'none',
               borderRight: '1px solid #1e293b',
               borderBottom: '1px solid #1e293b',
@@ -179,8 +209,8 @@ export default function App() {
             {/* Upper-right: Fleet Graph — always mounted */}
             <div style={{
               position: 'absolute', top: 0, right: 0,
-              width: open ? '50%' : '100%',
-              height: open ? '50%' : '100%',
+              width: open ? `${100 - hSplit}%` : '100%',
+              height: open ? `${vSplit}%` : '100%',
               transition: 'width 0.35s ease, height 0.35s ease',
               borderBottom: open ? '1px solid #1e293b' : 'none',
               boxSizing: 'border-box',
@@ -190,7 +220,8 @@ export default function App() {
 
             {/* Lower-left: Stats */}
             <div style={{
-              position: 'absolute', bottom: 0, left: 0, width: '50%', height: '50%',
+              position: 'absolute', bottom: 0, left: 0,
+              width: `${hSplit}%`, height: `${100 - vSplit}%`,
               opacity: open ? 1 : 0,
               transform: open ? 'none' : 'translateY(14px)',
               transition: 'opacity 0.32s ease 0.06s, transform 0.32s ease 0.06s',
@@ -203,7 +234,8 @@ export default function App() {
 
             {/* Lower-right: Screen/Logs */}
             <div style={{
-              position: 'absolute', bottom: 0, right: 0, width: '50%', height: '50%',
+              position: 'absolute', bottom: 0, right: 0,
+              width: `${100 - hSplit}%`, height: `${100 - vSplit}%`,
               opacity: open ? 1 : 0,
               transform: open ? 'none' : 'translateY(14px)',
               transition: 'opacity 0.35s ease 0.1s, transform 0.35s ease 0.1s',
@@ -212,6 +244,42 @@ export default function App() {
             }}>
               {panelNode && <ScreenPanel node={panelNode} isMock={graph.isMock !== false} />}
             </div>
+
+            {/* Vertical drag handle */}
+            {open && (
+              <div
+                onMouseDown={startHDrag}
+                style={{
+                  position: 'absolute', top: 0, bottom: 0,
+                  left: `${hSplit}%`,
+                  width: 8,
+                  transform: 'translateX(-50%)',
+                  cursor: 'col-resize',
+                  zIndex: 10,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}
+              >
+                <div style={{ width: 2, height: '40%', background: '#1e3a5f', borderRadius: 1, opacity: 0.6 }} />
+              </div>
+            )}
+
+            {/* Horizontal drag handle */}
+            {open && (
+              <div
+                onMouseDown={startVDrag}
+                style={{
+                  position: 'absolute', left: 0, right: 0,
+                  top: `${vSplit}%`,
+                  height: 8,
+                  transform: 'translateY(-50%)',
+                  cursor: 'row-resize',
+                  zIndex: 10,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}
+              >
+                <div style={{ height: 2, width: '40%', background: '#1e3a5f', borderRadius: 1, opacity: 0.6 }} />
+              </div>
+            )}
 
           </div>
 
