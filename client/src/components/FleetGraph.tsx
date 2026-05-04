@@ -22,6 +22,7 @@ export default function FleetGraph({ graph, onNodeSelect, selectedNodeId }: Prop
   const containerRef = useRef<HTMLDivElement>(null);
   const fgRef = useRef<FGInstance>(null);
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
+  const [charge, setCharge] = useState(-120);
   const manualZoom = useRef(false);
   useEffect(() => {
     if (!containerRef.current) return;
@@ -38,15 +39,16 @@ export default function FleetGraph({ graph, onNodeSelect, selectedNodeId }: Prop
     return () => { document.body.style.cursor = 'default'; };
   }, []);
 
-  // Tune forces whenever graph data changes so station clusters don't overlap
+  // Tune forces whenever graph data or charge changes
   useEffect(() => {
     if (!graph.nodes.length || !fgRef.current) return;
-    fgRef.current.d3Force('charge').strength(-120);
+    fgRef.current.d3Force('charge').strength(charge);
     fgRef.current.d3Force('link').distance((link: { source: { id?: string } | string }) => {
       const src = typeof link.source === 'object' ? link.source.id : link.source;
       return src === 'homebase' ? 80 : 40;
     });
-  }, [graph.nodes.length]);
+    fgRef.current.d3ReheatSimulation();
+  }, [graph.nodes.length, charge]);
 
   // Zoom to fit when selection is cleared
   useEffect(() => {
@@ -57,7 +59,7 @@ export default function FleetGraph({ graph, onNodeSelect, selectedNodeId }: Prop
   }, [selectedNodeId]);
 
   return (
-    <div ref={containerRef} style={{ width: '100%', height: '100%' }}>
+    <div ref={containerRef} style={{ width: '100%', height: '100%', position: 'relative' }}>
       <ForceGraph2D
         ref={fgRef}
         graphData={graph}
@@ -125,6 +127,24 @@ export default function FleetGraph({ graph, onNodeSelect, selectedNodeId }: Prop
         }}
         nodeCanvasObjectMode={() => 'replace'}
       />
+
+      {/* Force tuning overlay */}
+      <div style={{
+        position: 'absolute', bottom: 10, left: 10,
+        display: 'flex', alignItems: 'center', gap: 8,
+        background: '#0d1f3599', backdropFilter: 'blur(4px)',
+        border: '1px solid #1e293b', borderRadius: 4,
+        padding: '4px 10px', pointerEvents: 'auto',
+      }}>
+        <span style={{ color: '#475569', fontSize: '0.6rem', letterSpacing: '0.08em', userSelect: 'none' }}>CHARGE</span>
+        <input
+          type="range" min={-400} max={-20} step={10}
+          value={charge}
+          onChange={e => setCharge(Number(e.target.value))}
+          style={{ width: 90, accentColor: '#4ade80', cursor: 'pointer' }}
+        />
+        <span style={{ color: '#64748b', fontSize: '0.6rem', width: 32, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{charge}</span>
+      </div>
     </div>
   );
 }
