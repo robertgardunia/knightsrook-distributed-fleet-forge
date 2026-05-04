@@ -91,7 +91,7 @@ The header has a two-mode segmented toggle:
 | **Offline Demo** | Default. Mock fleet, no containers needed. Switching to it calls `POST /api/chaos/stop` (spins down any running lab). |
 | **Online Lab** | Calls `POST /api/chaos/start` → `docker compose -f docker-compose.chaos.yml up --build -d`. Station controllers connect back to the host dev server via `host.docker.internal:5020` (Docker Desktop resolves this automatically). Once real agents register, `isMock` on `fleet:graph` flips to `false`. |
 
-> **Windows note:** Vite proxy targets use `127.0.0.1` instead of `localhost` to avoid IPv6/IPv4 mismatch on Windows. The socket.io client uses polling-only transport in dev mode — Vite's WebSocket proxy is unreliable on Windows and causes the connection to fail.
+> **Windows note:** Vite proxy targets use `127.0.0.1` instead of `localhost` to avoid the IPv6/IPv4 mismatch in Node 18+ on Windows.
 
 ## Docker
 
