@@ -186,35 +186,32 @@ export default function App() {
           </div>
 
           {/* Mode toggle */}
-          {labBusy ? (
-            <span style={{ color: '#475569', fontSize: '0.65rem', letterSpacing: '0.08em', padding: '0 8px' }}>…</span>
-          ) : (
-            <div style={{ display: 'flex', border: '1px solid #1e293b', borderRadius: 3, overflow: 'hidden', marginRight: 6 }}>
-              {([
-                { label: 'Offline Demo', mode: 'demo' as const, action: 'stop'  as const },
-                { label: 'Online Lab',   mode: 'lab'  as const, action: 'start' as const },
-              ] as const).map(({ label, mode, action }) => (
-                <button
-                  key={label}
-                  disabled={labMode === mode}
-                  onClick={async () => { setLabBusy(true); setLabMode(mode); await callChaos(action); setTimeout(() => setLabBusy(false), 1500); }}
-                  style={{
-                    background: labMode === mode ? '#0d2a1a' : 'transparent',
-                    border: 'none',
-                    borderLeft: label === 'Online Lab' ? '1px solid #1e293b' : 'none',
-                    color: labMode === mode ? '#4ade80' : '#475569',
-                    padding: '4px 12px',
-                    fontSize: '0.65rem',
-                    cursor: labMode === mode ? 'default' : 'pointer',
-                    letterSpacing: '0.08em',
-                    transition: 'all 0.2s ease',
-                  }}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          )}
+          <div style={{ display: 'flex', border: '1px solid #1e293b', borderRadius: 3, overflow: 'hidden', marginRight: 6 }}>
+            {([
+              { label: 'Offline Demo', mode: 'demo' as const, action: 'stop'  as const },
+              { label: 'Online Lab',   mode: 'lab'  as const, action: 'start' as const },
+            ] as const).map(({ label, mode, action }) => (
+              <button
+                key={label}
+                disabled={labBusy || labMode === mode}
+                onClick={async () => { setLabBusy(true); setLabMode(mode); await callChaos(action); setTimeout(() => setLabBusy(false), 1500); }}
+                style={{
+                  background: labMode === mode ? '#0d2a1a' : 'transparent',
+                  border: 'none',
+                  borderLeft: label === 'Online Lab' ? '1px solid #1e293b' : 'none',
+                  color: labMode === mode ? '#4ade80' : '#475569',
+                  padding: '4px 12px',
+                  fontSize: '0.65rem',
+                  cursor: labBusy || labMode === mode ? 'default' : 'pointer',
+                  letterSpacing: '0.08em',
+                  transition: 'all 0.2s ease',
+                  opacity: labBusy && labMode !== mode ? 0.4 : 1,
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
 
           {/* Nav items */}
           {(['Fleet', 'Alerts', 'Settings'] as const).map(label => (
