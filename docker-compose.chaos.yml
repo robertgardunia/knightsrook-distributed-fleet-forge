@@ -1,0 +1,165 @@
+# Chaos lab — 1 homebase, 2 stations × (1 controller + 3 game kiosks + 1 info kiosk)
+#
+# Network topology mirrors production:
+#   fleet-net       — homebase ↔ station-controllers (+ chaos-proxy)
+#   station-s1-net  — s1-controller relay ↔ s1 kiosks
+#   station-s2-net  — s2-controller relay ↔ s2 kiosks
+#
+# Kiosks have NO route to homebase. All traffic flows through their
+# station-controller relay — the cascade autonomy seam.
+
+services:
+
+  # ── Homebase ──────────────────────────────────────────────────────────────
+  homebase:
+    build: .
+    ports:
+      - "5020:5020"
+    environment:
+      NODE_ENV: production
+      PORT: "5020"
+      USE_MOCK: "false"
+    networks:
+      - fleet-net
+    restart: unless-stopped
+
+  # ── Station S1 ────────────────────────────────────────────────────────────
+  s1-controller:
+    build: ./containers/station-controller
+    environment:
+      AGENT_ID: station-s1
+      AGENT_NAME: S1
+      HOMEBASE_URL: http://homebase:5020
+      RELAY_PORT: "5021"
+    networks:
+      - fleet-net
+      - station-s1-net
+    depends_on: [homebase]
+    restart: unless-stopped
+
+  s1-game-1:
+    build: ./containers/fleet-agent
+    environment:
+      AGENT_ID: s1-game-1
+      AGENT_NAME: KG1
+      AGENT_ROLE: game-kiosk
+      AGENT_PARENT: station-s1
+      HOMEBASE_URL: http://s1-controller:5021
+    networks: [station-s1-net]
+    depends_on: [s1-controller]
+    restart: unless-stopped
+
+  s1-game-2:
+    build: ./containers/fleet-agent
+    environment:
+      AGENT_ID: s1-game-2
+      AGENT_NAME: KG2
+      AGENT_ROLE: game-kiosk
+      AGENT_PARENT: station-s1
+      HOMEBASE_URL: http://s1-controller:5021
+    networks: [station-s1-net]
+    depends_on: [s1-controller]
+    restart: unless-stopped
+
+  s1-game-3:
+    build: ./containers/fleet-agent
+    environment:
+      AGENT_ID: s1-game-3
+      AGENT_NAME: KG3
+      AGENT_ROLE: game-kiosk
+      AGENT_PARENT: station-s1
+      HOMEBASE_URL: http://s1-controller:5021
+    networks: [station-s1-net]
+    depends_on: [s1-controller]
+    restart: unless-stopped
+
+  s1-info-1:
+    build: ./containers/fleet-agent
+    environment:
+      AGENT_ID: s1-info-1
+      AGENT_NAME: KI1
+      AGENT_ROLE: info-kiosk
+      AGENT_PARENT: station-s1
+      HOMEBASE_URL: http://s1-controller:5021
+    networks: [station-s1-net]
+    depends_on: [s1-controller]
+    restart: unless-stopped
+
+  # ── Station S2 ────────────────────────────────────────────────────────────
+  s2-controller:
+    build: ./containers/station-controller
+    environment:
+      AGENT_ID: station-s2
+      AGENT_NAME: S2
+      HOMEBASE_URL: http://homebase:5020
+      RELAY_PORT: "5021"
+    networks:
+      - fleet-net
+      - station-s2-net
+    depends_on: [homebase]
+    restart: unless-stopped
+
+  s2-game-1:
+    build: ./containers/fleet-agent
+    environment:
+      AGENT_ID: s2-game-1
+      AGENT_NAME: KG1
+      AGENT_ROLE: game-kiosk
+      AGENT_PARENT: station-s2
+      HOMEBASE_URL: http://s2-controller:5021
+    networks: [station-s2-net]
+    depends_on: [s2-controller]
+    restart: unless-stopped
+
+  s2-game-2:
+    build: ./containers/fleet-agent
+    environment:
+      AGENT_ID: s2-game-2
+      AGENT_NAME: KG2
+      AGENT_ROLE: game-kiosk
+      AGENT_PARENT: station-s2
+      HOMEBASE_URL: http://s2-controller:5021
+    networks: [station-s2-net]
+    depends_on: [s2-controller]
+    restart: unless-stopped
+
+  s2-game-3:
+    build: ./containers/fleet-agent
+    environment:
+      AGENT_ID: s2-game-3
+      AGENT_NAME: KG3
+      AGENT_ROLE: game-kiosk
+      AGENT_PARENT: station-s2
+      HOMEBASE_URL: http://s2-controller:5021
+    networks: [station-s2-net]
+    depends_on: [s2-controller]
+    restart: unless-stopped
+
+  s2-info-1:
+    build: ./containers/fleet-agent
+    environment:
+      AGENT_ID: s2-info-1
+      AGENT_NAME: KI1
+      AGENT_ROLE: info-kiosk
+      AGENT_PARENT: station-s2
+      HOMEBASE_URL: http://s2-controller:5021
+    networks: [station-s2-net]
+    depends_on: [s2-controller]
+    restart: unless-stopped
+
+  # ── Chaos Proxy (Toxiproxy) ───────────────────────────────────────────────
+  # Control API on :8474 — gremlin driver injects failures here
+  chaos-proxy:
+    image: ghcr.io/shopify/toxiproxy:2.9.0
+    ports:
+      - "8474:8474"
+    networks:
+      - fleet-net
+      - station-s1-net
+      - station-s2-net
+    restart: unless-stopped
+
+networks:
+  fleet-net:
+  station-s1-net:
+  station-s2-net:

@@ -8,6 +8,8 @@ Distributed Fleet Forge: A containerized chaos lab where sovereign-tier kiosk fl
 |---|---|---|
 | `fleet:graph` | server → client | Full fleet graph (nodes + links) |
 | `fleet:request` | client → server | Request/re-request fleet data |
+| `agent:register` | agent → server | Agent announces itself (`id`, `name`, `role`, `parentId`) |
+| `agent:heartbeat` | agent → server | Keepalive every 5s — node goes `dead` after 15s silence |
 
 ## Stack
 
@@ -66,5 +68,22 @@ pnpm dev
 ## Docker
 
 ```bash
+# Production (app + MySQL)
 docker compose up --build
+
+# Chaos lab (homebase + 2 stations + kiosks + Toxiproxy)
+docker compose -f docker-compose.chaos.yml up --build
 ```
+
+## Chaos lab
+
+`docker-compose.chaos.yml` spins up the full cascade autonomy stack with correct network isolation:
+
+- **`fleet-net`** — homebase ↔ station-controllers only
+- **`station-s1-net` / `station-s2-net`** — kiosks ↔ their station-controller relay only; no direct route to homebase
+
+Each station-controller runs a relay (`containers/station-controller/`) that connects upstream to homebase and listens downstream for kiosk registrations — the cascade autonomy seam. Kiosks (`containers/fleet-agent/`) connect only to their controller relay.
+
+**Toxiproxy** control API is exposed on `:8474` for the gremlin driver to inject failures between tiers.
+
+The server falls back to `buildMockFleet()` when no agents are connected (`USE_MOCK=true` forces mock always).
