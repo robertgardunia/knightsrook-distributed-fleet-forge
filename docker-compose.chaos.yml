@@ -1,7 +1,10 @@
-# Chaos lab — 1 homebase, 4 stations × (1 controller + 4 game kiosks + 2 info kiosks) = 29 nodes
+# Chaos lab — 4 stations × (1 controller + 4 game kiosks + 2 info kiosks) = 28 nodes
 #
-# Network topology mirrors production:
-#   fleet-net          — homebase ↔ station-controllers (+ chaos-proxy)
+# Homebase is the host dev server (pnpm dev on :5020). Station controllers
+# reach it via host.docker.internal:5020 (Docker Desktop resolves this automatically).
+#
+# Network topology:
+#   fleet-net          — station-controllers ↔ chaos-proxy
 #   station-sN-net     — sN-controller relay ↔ sN kiosks only; no direct route to homebase
 #
 # Kiosks connect to their station-controller relay, never homebase directly.
@@ -12,21 +15,6 @@
 
 services:
 
-  # ── Homebase ──────────────────────────────────────────────────────────────
-  homebase:
-    build: .
-    container_name: homebase
-    ports:
-      - "5020:5020"
-    environment:
-      NODE_ENV: production
-      PORT: "5020"
-      USE_MOCK: "false"
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-    networks: [fleet-net]
-    restart: unless-stopped
-
   # ── Station S1 ────────────────────────────────────────────────────────────
   s1-controller:
     container_name: s1-controller
@@ -34,10 +22,9 @@ services:
     environment:
       AGENT_ID: station-s1
       AGENT_NAME: S1
-      HOMEBASE_URL: http://homebase:5020
+      HOMEBASE_URL: http://host.docker.internal:5020
       RELAY_PORT: "5021"
     networks: [fleet-net, station-s1-net]
-    depends_on: [homebase]
     restart: unless-stopped
 
   s1-game-1:
@@ -105,10 +92,9 @@ services:
     environment:
       AGENT_ID: station-s2
       AGENT_NAME: S2
-      HOMEBASE_URL: http://homebase:5020
+      HOMEBASE_URL: http://host.docker.internal:5020
       RELAY_PORT: "5021"
     networks: [fleet-net, station-s2-net]
-    depends_on: [homebase]
     restart: unless-stopped
 
   s2-game-1:
@@ -176,10 +162,9 @@ services:
     environment:
       AGENT_ID: station-s3
       AGENT_NAME: S3
-      HOMEBASE_URL: http://homebase:5020
+      HOMEBASE_URL: http://host.docker.internal:5020
       RELAY_PORT: "5021"
     networks: [fleet-net, station-s3-net]
-    depends_on: [homebase]
     restart: unless-stopped
 
   s3-game-1:
@@ -247,10 +232,9 @@ services:
     environment:
       AGENT_ID: station-s4
       AGENT_NAME: S4
-      HOMEBASE_URL: http://homebase:5020
+      HOMEBASE_URL: http://host.docker.internal:5020
       RELAY_PORT: "5021"
     networks: [fleet-net, station-s4-net]
-    depends_on: [homebase]
     restart: unless-stopped
 
   s4-game-1:

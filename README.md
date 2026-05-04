@@ -78,8 +78,7 @@ Force layout uses charge `-30` with per-link distances (homebase→station `80`,
 ## Quickstart
 
 ```bash
-cp .env.example .env
-# fill in .env values
+cp .env.example .env   # minimum: PORT=5020, NODE_ENV=development
 
 pnpm install
 pnpm dev
@@ -90,7 +89,7 @@ The header has a two-mode segmented toggle:
 | Mode | Behavior |
 |---|---|
 | **Offline Demo** | Default. Mock fleet, no containers needed. Switching to it calls `POST /api/chaos/stop` (spins down any running lab). |
-| **Online Lab** | Calls `POST /api/chaos/start` → `docker compose -f docker-compose.chaos.yml up --build -d`. Once real agents register, `isMock` on `fleet:graph` flips to `false`. |
+| **Online Lab** | Calls `POST /api/chaos/start` → `docker compose -f docker-compose.chaos.yml up --build -d`. Station controllers connect back to the host dev server via `host.docker.internal:5020` (Docker Desktop resolves this automatically). Once real agents register, `isMock` on `fleet:graph` flips to `false`. |
 
 > **Windows note:** Vite proxy targets use `127.0.0.1` instead of `localhost` to avoid the IPv6/IPv4 mismatch in Node 18+ on Windows.
 
