@@ -32,11 +32,15 @@ const FleetGraph = forwardRef<FleetGraphHandle, Props>(function FleetGraph({ gra
 
   useImperativeHandle(ref, () => ({
     zoomToNode(id: string) {
-      const node = fgRef.current?.graphData().nodes.find((n: FleetNode & { x: number; y: number }) => n.id === id);
-      if (!node) return;
+      // Lock zoom immediately so ResizeObserver doesn't call zoomToFit during the
+      // panel-open transition (350ms), then center once the layout has settled.
       manualZoom.current = true;
-      fgRef.current?.centerAt(node.x, node.y, 600);
-      fgRef.current?.zoom(ZOOM_LEVEL[node.role] ?? 3, 600);
+      setTimeout(() => {
+        const node = fgRef.current?.graphData().nodes.find((n: FleetNode & { x: number; y: number }) => n.id === id);
+        if (!node) return;
+        fgRef.current?.centerAt(node.x, node.y, 600);
+        fgRef.current?.zoom(ZOOM_LEVEL[node.role] ?? 3, 600);
+      }, 380);
     },
   }));
   useEffect(() => {
