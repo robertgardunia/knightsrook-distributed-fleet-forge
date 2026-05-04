@@ -103,6 +103,11 @@ export default function App() {
   const [searchOpen, setSearchOpen] = useState(false);
   const fgHandle = useRef<FleetGraphHandle>(null);
   const gridRef = useRef<HTMLDivElement>(null);
+  // In lab mode, hide mock data until real agents connect
+  const visibleGraph = labMode === 'lab' && graph.isMock !== false
+    ? { nodes: [], links: [], isMock: true }
+    : graph;
+
   const lastSelected = useRef<FleetNode | null>(null);
   if (selected) lastSelected.current = selected;
   const panelNode = selected ?? lastSelected.current;
@@ -158,7 +163,7 @@ export default function App() {
 
         {/* Search */}
         <div style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
-          <SearchBox nodes={graph.nodes} onSelect={node => { setSelected(node); fgHandle.current?.zoomToNode(node.id); setSearchQuery(''); setSearchOpen(false); }} query={searchQuery} setQuery={setSearchQuery} open={searchOpen} setOpen={setSearchOpen} />
+          <SearchBox nodes={visibleGraph.nodes} onSelect={node => { setSelected(node); fgHandle.current?.zoomToNode(node.id); setSearchQuery(''); setSearchOpen(false); }} query={searchQuery} setQuery={setSearchQuery} open={searchOpen} setOpen={setSearchOpen} />
         </div>
 
         {/* Right controls */}
@@ -234,21 +239,21 @@ export default function App() {
           {open && panelNode ? (
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               <div style={{ height: '50vh', flexShrink: 0, borderBottom: '1px solid #1e293b' }}>
-                <MonitorPanel node={panelNode} isMock={graph.isMock !== false} />
+                <MonitorPanel node={panelNode} isMock={visibleGraph.isMock !== false} />
               </div>
               <div style={{ height: '50vh', flexShrink: 0, borderBottom: '1px solid #1e293b' }}>
-                <FleetGraph ref={fgHandle} graph={graph} onNodeSelect={setSelected} selectedNodeId={selected?.id} />
+                <FleetGraph ref={fgHandle} graph={visibleGraph} onNodeSelect={setSelected} selectedNodeId={selected?.id} />
               </div>
               <div style={{ height: '50vh', flexShrink: 0, borderBottom: '1px solid #1e293b' }}>
-                <StatsPanel node={panelNode} isMock={graph.isMock !== false} />
+                <StatsPanel node={panelNode} isMock={visibleGraph.isMock !== false} />
               </div>
               <div style={{ height: '50vh', flexShrink: 0 }}>
-                <ScreenPanel node={panelNode} isMock={graph.isMock !== false} />
+                <ScreenPanel node={panelNode} isMock={visibleGraph.isMock !== false} />
               </div>
             </div>
           ) : (
             <div style={{ height: '100%' }}>
-              <FleetGraph ref={fgHandle} graph={graph} onNodeSelect={setSelected} selectedNodeId={selected?.id} />
+              <FleetGraph ref={fgHandle} graph={visibleGraph} onNodeSelect={setSelected} selectedNodeId={selected?.id} />
             </div>
           )}
         </div>
@@ -270,7 +275,7 @@ export default function App() {
               borderBottom: '1px solid #1e293b',
               boxSizing: 'border-box',
             }}>
-              {panelNode && <MonitorPanel node={panelNode} isMock={graph.isMock !== false} />}
+              {panelNode && <MonitorPanel node={panelNode} isMock={visibleGraph.isMock !== false} />}
             </div>
 
             {/* Upper-right: Fleet Graph — always mounted */}
@@ -282,7 +287,12 @@ export default function App() {
               borderBottom: open ? '1px solid #1e293b' : 'none',
               boxSizing: 'border-box',
             }}>
-              <FleetGraph ref={fgHandle} graph={graph} onNodeSelect={setSelected} selectedNodeId={selected?.id} />
+              <FleetGraph ref={fgHandle} graph={visibleGraph} onNodeSelect={setSelected} selectedNodeId={selected?.id} />
+              {labMode === 'lab' && graph.isMock !== false && (
+                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+                  <span style={{ color: '#334155', fontSize: '0.72rem', letterSpacing: '0.12em', textTransform: 'uppercase' }}>Waiting for agents…</span>
+                </div>
+              )}
             </div>
 
             {/* Lower-left: Stats */}
@@ -296,7 +306,7 @@ export default function App() {
               borderRight: '1px solid #1e293b',
               boxSizing: 'border-box',
             }}>
-              {panelNode && <StatsPanel node={panelNode} isMock={graph.isMock !== false} />}
+              {panelNode && <StatsPanel node={panelNode} isMock={visibleGraph.isMock !== false} />}
             </div>
 
             {/* Lower-right: Screen/Logs */}
@@ -309,7 +319,7 @@ export default function App() {
               pointerEvents: open ? 'auto' : 'none',
               boxSizing: 'border-box',
             }}>
-              {panelNode && <ScreenPanel node={panelNode} isMock={graph.isMock !== false} />}
+              {panelNode && <ScreenPanel node={panelNode} isMock={visibleGraph.isMock !== false} />}
             </div>
 
             {/* Vertical drag handle */}
@@ -357,7 +367,7 @@ export default function App() {
             flexShrink: 0,
             transition: 'width 0.35s ease',
           }}>
-            <Sidebar graph={graph} selected={selected} onClose={() => setSelected(null)} />
+            <Sidebar graph={visibleGraph} selected={selected} onClose={() => setSelected(null)} />
           </div>
 
         </div>
