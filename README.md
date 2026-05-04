@@ -112,7 +112,7 @@ docker compose -f docker-compose.chaos.yml up --build
 
 Each station-controller runs a relay (`containers/station-controller/`) that connects upstream to homebase and listens downstream for kiosk registrations — the cascade autonomy seam.
 
-Game kiosks (`containers/game-kiosk/`) serve HexGL on port 8080 in attract mode: title screen with "INSERT COIN" blink → pre-recorded replay drives the ship around the track → loops. Info kiosks (`containers/info-kiosk/`) serve a slideshow of simulator guide slides on port 8080 with random 8–20s intervals between slides. Both use a two-stage Docker build: TypeScript compiles in stage 1, the runtime stage installs production `node_modules` separately so the fleet agent has `socket.io-client` available.
+Game kiosks (`containers/game-kiosk/`) serve HexGL on port 8080 in attract mode: title screen with "INSERT COIN" blink → pre-recorded replay drives the ship around the track → loops. Info kiosks (`containers/info-kiosk/`) serve a slideshow of simulator guide slides on port 8080 with random 8–20s intervals between slides. Both use a two-stage Docker build: TypeScript compiles in stage 1, the runtime stage installs production `node_modules` separately so the fleet agent has `socket.io-client` available. Nginx serves kiosk HTML using the `index` directive (not a redirect) to avoid nginx leaking the internal container port (8080) in Location headers when accessed via host-mapped ports.
 
 **Toxiproxy** control API is exposed on `:8474` for the gremlin driver to inject failures between tiers.
 

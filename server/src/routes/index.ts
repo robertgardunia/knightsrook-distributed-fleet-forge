@@ -9,10 +9,11 @@ const projectRoot = path.resolve(process.cwd(), '..');
 function runCompose(args: string[]) {
   const child = spawn('docker', ['compose', '-f', 'docker-compose.chaos.yml', ...args], {
     cwd: projectRoot,
-    detached: true,
-    stdio: 'ignore',
+    stdio: 'pipe',
     windowsHide: true,
   });
+  child.stdout?.resume();
+  child.stderr?.resume();
   child.unref();
 }
 

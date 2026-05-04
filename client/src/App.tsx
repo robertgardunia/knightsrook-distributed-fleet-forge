@@ -107,9 +107,11 @@ export default function App() {
   const gridRef = useRef<HTMLDivElement>(null);
   const isForging = labMode === 'lab' && graph.isMock !== false;
 
-  const visibleGraph = (labMode === 'demo' && graph.isMock !== true)
-    ? { nodes: [], links: [], isMock: false as const }
-    : graph;
+  const visibleGraph = (() => {
+    if (labMode === 'demo' && graph.isMock !== true)  return { nodes: [], links: [], isMock: false as const };
+    if (labMode === 'lab'  && graph.isMock !== false) return { nodes: [], links: [], isMock: true  as const };
+    return graph;
+  })();
 
   const lastSelected = useRef<FleetNode | null>(null);
   if (selected) lastSelected.current = selected;
