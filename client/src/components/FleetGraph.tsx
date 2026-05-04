@@ -105,6 +105,15 @@ export default function FleetGraph({ graph, onNodeSelect, selectedNodeId }: Prop
           const isKiosk = n.role === 'game-kiosk' || n.role === 'info-kiosk';
           const radius = Math.sqrt(n.val) * 3;
 
+          // Blend a hex color toward the dark background for true dimming (no transparency)
+          const dim = (hex: string, t = 0.35): string => {
+            const c = parseInt(hex.slice(1), 16);
+            const r = Math.round(((c >> 16) & 0xff) * t);
+            const g = Math.round(((c >>  8) & 0xff) * t);
+            const b = Math.round(( c        & 0xff) * t);
+            return `rgb(${r},${g},${b})`;
+          };
+
           if (isSelected) {
             ctx.beginPath();
             ctx.arc(n.x, n.y, radius + 5 / globalScale, 0, 2 * Math.PI);
@@ -115,16 +124,16 @@ export default function FleetGraph({ graph, onNodeSelect, selectedNodeId }: Prop
 
           ctx.beginPath();
           ctx.arc(n.x, n.y, radius, 0, 2 * Math.PI);
-          ctx.fillStyle = n.color + (isDimmed ? '55' : 'cc');
+          ctx.fillStyle = isDimmed ? dim(n.color) : n.color + 'cc';
           ctx.fill();
-          ctx.strokeStyle = isDimmed ? n.color + '44' : isSelected ? '#ffffff' : n.color;
+          ctx.strokeStyle = isDimmed ? dim(n.color, 0.45) : isSelected ? '#ffffff' : n.color;
           ctx.lineWidth = (isSelected ? 2 : 1.5) / globalScale;
           ctx.stroke();
 
           if (globalScale > 1.2 || n.role === 'homebase' || n.role === 'station-controller') {
             const fontSize = Math.max(isKiosk ? 5 : 6, (isKiosk ? 8 : 10) / globalScale);
             ctx.font = `${fontSize}px monospace`;
-            ctx.fillStyle = isDimmed ? '#f1f5f944' : '#f1f5f9';
+            ctx.fillStyle = isDimmed ? '#1e293b' : '#f1f5f9';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText(n.name, n.x, n.y);
