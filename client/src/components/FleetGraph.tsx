@@ -82,7 +82,7 @@ const FleetGraph = forwardRef<FleetGraphHandle, Props>(function FleetGraph({ gra
         ref={fgRef}
         graphData={graph}
         warmupTicks={600}
-        cooldownTime={3000}
+        cooldownTime={800}
         onEngineStop={() => {
           if (!manualZoom.current) fgRef.current?.zoomToFit(400, 10);
         }}

@@ -19,6 +19,8 @@ html, body, #root {
   100% { content: ''; }
 }
 .forging-label {
+  display: flex;
+  align-items: baseline;
   color: #334155;
   font-size: 0.72rem;
   letter-spacing: 0.18em;
@@ -26,6 +28,9 @@ html, body, #root {
 }
 .forging-label::after {
   content: '';
+  display: inline-block;
+  width: 1.8ch;
+  text-align: left;
   animation: forge-dots 1.6s steps(4, end) infinite;
 }
 
