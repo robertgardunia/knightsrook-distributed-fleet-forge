@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { socket } from '../socket';
 import type { FleetNode, NodeRole, NodeStatus, NodeStats } from '../types/fleet';
@@ -84,22 +84,43 @@ function GameScreen({ node }: { node: FleetNode }) {
   );
 }
 
-function InfoScreen() {
-  const events = [
-    { time: '2:00 PM', title: 'Esports Open — Stage A', active: false },
-    { time: '3:30 PM', title: 'Free Play — All Stations', active: true },
-    { time: '5:00 PM', title: 'Tournament Finals', active: false },
-    { time: '7:00 PM', title: 'Closing Ceremony', active: false },
-  ];
+const INFO_SLIDES = [
+  '/games/info-build-racer.png',
+  '/games/info-controls.png',
+  '/games/info-cornering.png',
+  '/games/info-scan-qr.png',
+];
+
+function InfoScreen({ node }: { node: FleetNode }) {
+  const initial = seed(node.id) % INFO_SLIDES.length;
+  const [idx, setIdx] = useState(initial);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    const schedule = () => {
+      const delay = 8000 + Math.random() * 7000;
+      timerRef.current = setTimeout(() => {
+        setIdx(i => (i + 1) % INFO_SLIDES.length);
+        schedule();
+      }, delay);
+    };
+    schedule();
+    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+  }, []);
+
   return (
-    <div style={{ flex: 1, background: '#000814', padding: '20px 24px', overflow: 'auto' }}>
-      <div style={{ fontSize: '0.58rem', color: '#7dd3fc', letterSpacing: '0.3em', marginBottom: 20 }}>TODAY'S SCHEDULE</div>
-      {events.map((e, i) => (
-        <div key={i} style={{ marginBottom: 14, borderLeft: `2px solid ${e.active ? '#4ade80' : '#1e293b'}`, paddingLeft: 12 }}>
-          <div style={{ color: e.active ? '#4ade80' : '#475569', fontSize: '0.62rem', letterSpacing: '0.05em' }}>{e.time}</div>
-          <div style={{ color: e.active ? '#f1f5f9' : '#64748b', fontSize: '0.76rem', marginTop: 2 }}>{e.title}</div>
-        </div>
-      ))}
+    <div style={{ flex: 1, overflow: 'hidden', background: '#000814', position: 'relative' }}>
+      <img
+        key={idx}
+        src={INFO_SLIDES[idx]}
+        alt=""
+        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+      />
+      <div style={{ position: 'absolute', bottom: 6, right: 8, display: 'flex', gap: 4 }}>
+        {INFO_SLIDES.map((_, i) => (
+          <div key={i} style={{ width: 5, height: 5, borderRadius: '50%', background: i === idx ? '#4ade80' : '#1e293b' }} />
+        ))}
+      </div>
     </div>
   );
 }
@@ -171,7 +192,7 @@ function LiveScreen({ node, live }: { node: FleetNode; live: NodeStats }) {
 function ScreenView({ node, live }: { node: FleetNode; live?: NodeStats }) {
   if (live) return <LiveScreen node={node} live={live} />;
   if (node.role === 'game-kiosk') return <GameScreen node={node} />;
-  if (node.role === 'info-kiosk') return <InfoScreen />;
+  if (node.role === 'info-kiosk') return <InfoScreen node={node} />;
   return <ControllerScreen node={node} />;
 }
 
