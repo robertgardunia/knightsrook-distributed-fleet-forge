@@ -70,8 +70,8 @@ function StatsView({ node, live }: { node: FleetNode; live?: NodeStats }) {
 const HEXGL_SCREENS = [
   '/games/hexgl-title.png',
   '/games/hexgl-gameover.jpg',
-  '/games/hexgl-race1.webp',
-  '/games/hexgl-race2.webp',
+  '/games/hexgl-race1.png',
+  '/games/hexgl-race2.png',
   '/games/hexgl-race3.png',
 ];
 
