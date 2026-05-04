@@ -21,13 +21,14 @@ const HEARTBEAT_TIMEOUT_MS = 15_000;
 const ALERT_THRESHOLD_MS   =  9_000;
 
 interface AgentRecord {
-  id:       string;
-  name:     string;
-  role:     NodeRole;
-  parentId: string | null;
-  lastSeen: number;
-  status:   NodeStatus;
-  alerting: boolean;
+  id:           string;
+  name:         string;
+  role:         NodeRole;
+  parentId:     string | null;
+  lastSeen:     number;
+  status:       NodeStatus;
+  alerting:     boolean;
+  activePlayer: string | undefined;
 }
 
 export class FleetRegistry {
@@ -46,9 +47,10 @@ export class FleetRegistry {
       name:     data.name,
       role:     data.role as NodeRole,
       parentId: data.parentId ?? null,
-      lastSeen: Date.now(),
-      status:   existing?.status ?? 'federation',
-      alerting: false,
+      lastSeen:     Date.now(),
+      status:       existing?.status ?? 'federation',
+      alerting:     false,
+      activePlayer: existing?.activePlayer,
     });
     console.log(`[registry] registered ${data.id} (${data.role})`);
     this.onChange();
@@ -68,6 +70,13 @@ export class FleetRegistry {
     } else if (wasAlerting) {
       this.onChange();
     }
+  }
+
+  setActivePlayer(id: string, player: string | undefined) {
+    const agent = this.agents.get(id);
+    if (!agent) return;
+    agent.activePlayer = player;
+    this.onChange();
   }
 
   unregister(id: string) {
@@ -97,13 +106,14 @@ export class FleetRegistry {
 
     for (const agent of this.agents.values()) {
       nodes.push({
-        id:       agent.id,
-        name:     agent.name,
-        role:     agent.role,
-        status:   agent.status,
-        val:      NODE_SIZE[agent.role] ?? 3,
-        color:    STATUS_COLOR[agent.status],
-        alerting: agent.alerting || undefined,
+        id:           agent.id,
+        name:         agent.name,
+        role:         agent.role,
+        status:       agent.status,
+        val:          NODE_SIZE[agent.role] ?? 3,
+        color:        STATUS_COLOR[agent.status],
+        alerting:     agent.alerting     || undefined,
+        activePlayer: agent.activePlayer || undefined,
       });
       const parent = agent.parentId ?? 'homebase';
       links.push({ source: parent, target: agent.id });

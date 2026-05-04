@@ -31,6 +31,10 @@ setInterval(() => {
   if (socket.connected) socket.emit('agent:heartbeat', { id: AGENT_ID });
 }, HEARTBEAT_MS);
 
+function emitEvent(type: string, extra: Record<string, string> = {}) {
+  if (socket.connected) socket.emit('kiosk:event', { id: AGENT_ID, type, ...extra });
+}
+
 // ── Visitor simulation ───────────────────────────────────────────────────────
 
 const SLIDES = ['info-build-racer.png', 'info-controls.png', 'info-cornering.png', 'info-scan-qr.png'];
@@ -47,6 +51,7 @@ function depart(dwellSecs: number) {
   if (slideTimer)  { clearTimeout(slideTimer);  slideTimer  = null; }
   if (departTimer) { clearTimeout(departTimer); departTimer = null; }
   console.log(`[${AGENT_ID}] VISITOR_DEPART dwell=${dwellSecs}s`);
+  emitEvent('VISITOR_DEPART');
   setTimeout(scheduleNextVisitor, rand(8_000, 40_000));
 }
 
@@ -54,6 +59,7 @@ function startVisit() {
   visiting = true;
   const dwellMs = rand(20_000, 90_000);
   console.log(`[${AGENT_ID}] VISITOR_ARRIVE`);
+  emitEvent('VISITOR_ARRIVE');
 
   // Log initial slide
   let slideIdx = Math.floor(Math.random() * SLIDES.length);

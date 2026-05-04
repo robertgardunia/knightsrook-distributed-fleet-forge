@@ -52,6 +52,11 @@ function StatsView({ node, live }: { node: FleetNode; live?: NodeStats }) {
         <Row label="Status" value={
           <span style={{ color: STATUS_COLOR[node.status] }}>● {node.status}</span>
         } />
+        {node.activePlayer && (
+          <Row label={node.role === 'info-kiosk' ? 'Visitor' : 'Player'} value={
+            <span style={{ color: '#4ade80' }}>{node.activePlayer}</span>
+          } />
+        )}
         <Row label="Role"     value={TIER_LABEL[node.role]} />
         {node.location && <Row label="Location" value={node.location} />}
         <Row label="Uptime" value={`${days}d ${hours}h ${mins}m`} />
