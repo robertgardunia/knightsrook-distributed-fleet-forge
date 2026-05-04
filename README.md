@@ -41,8 +41,8 @@ Three-tier cascade autonomy: homebase → station-controllers → kiosk swarms. 
 |---|---|---|
 | `homebase` | 1 | `Home` — central control plane |
 | `station-controller` | 2 | `S#` — per-station sovereign node |
-| `game-kiosk` | 3 | `KG1–KG6` — game terminals (6 per station), swarm participants |
-| `info-kiosk` | 3 | `KI1–KI3` — info displays (3 per station), swarm participants |
+| `game-kiosk` | 3 | `KG1–KG4` — game terminals (4 per station), swarm participants |
+| `info-kiosk` | 3 | `KI1–KI2` — info displays (2 per station), swarm participants |
 
 ### Status colors
 

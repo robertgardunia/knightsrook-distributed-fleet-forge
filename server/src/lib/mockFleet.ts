@@ -34,7 +34,7 @@ const NODE_SIZE: Record<NodeRole, number> = {
   'info-kiosk':          3,
 };
 
-export function buildMockFleet(stationCount = 6): FleetGraph {
+export function buildMockFleet(stationCount = 4): FleetGraph {
   const nodes: FleetNode[] = [];
   const links: FleetLink[] = [];
 
@@ -59,7 +59,7 @@ export function buildMockFleet(stationCount = 6): FleetGraph {
     });
     links.push({ source: 'homebase', target: stationId });
 
-    for (let k = 1; k <= 6; k++) {
+    for (let k = 1; k <= 4; k++) {
       const kioskId = `${stationId}-game-${k}`;
       nodes.push({
         id: kioskId,
@@ -72,7 +72,7 @@ export function buildMockFleet(stationCount = 6): FleetGraph {
       links.push({ source: stationId, target: kioskId });
     }
 
-    for (let i = 1; i <= 3; i++) {
+    for (let i = 1; i <= 2; i++) {
       const infoId = `${stationId}-info-${i}`;
       nodes.push({
         id: infoId,
