@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import ForceGraph2D from 'react-force-graph-2d';
+import { forceCollide } from 'd3-force-3d';
 import type { FleetGraph, FleetNode } from '../types/fleet';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -22,7 +23,7 @@ export default function FleetGraph({ graph, onNodeSelect, selectedNodeId }: Prop
   const containerRef = useRef<HTMLDivElement>(null);
   const fgRef = useRef<FGInstance>(null);
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
-  const charge = -10;
+  const charge = -30;
   const manualZoom = useRef(false);
   useEffect(() => {
     if (!containerRef.current) return;
@@ -47,6 +48,7 @@ export default function FleetGraph({ graph, onNodeSelect, selectedNodeId }: Prop
       const src = typeof link.source === 'object' ? link.source.id : link.source;
       return src === 'homebase' ? 80 : 40;
     });
+    fgRef.current.d3Force('collide', forceCollide((node: FleetNode) => Math.sqrt(node.val) * 3 + 6));
     fgRef.current.d3ReheatSimulation();
   }, [graph.nodes.length]);
 

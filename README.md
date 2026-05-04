@@ -59,7 +59,7 @@ Three-tier cascade autonomy: homebase → station-controllers → kiosk swarms. 
 | `game-kiosk` | 3 | `KG1–KG4` — game terminals (4 per station), swarm participants |
 | `info-kiosk` | 3 | `KI1–KI2` — info displays (2 per station), swarm participants |
 
-Force layout uses charge `-120` with per-link distances (homebase→station `80`, station→kiosk `40`) to keep station clusters separated.
+Force layout uses charge `-30` with per-link distances (homebase→station `80`, station→kiosk `40`) plus a `forceCollide` radius guard to prevent node overlap. Type shim for `d3-force-3d` lives in `client/src/d3-force-3d.d.ts`.
 
 ### Status colors
 
