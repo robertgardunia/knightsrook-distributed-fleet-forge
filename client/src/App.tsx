@@ -49,7 +49,8 @@ export default function App() {
       <header style={{ height: 52, padding: '0 20px', borderBottom: '1px solid #1e293b', background: '#0d1f35', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 12 }}>
 
         {/* Title */}
-        <h1 style={{ margin: 0, color: '#f1f5f9', fontSize: '0.9rem', fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', flexShrink: 0, }}>
+        <img src="/logo.png" alt="" style={{ height: 28, width: 28, flexShrink: 0 }} />
+        <h1 style={{ margin: 0, color: '#f1f5f9', fontSize: '0.9rem', fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', flexShrink: 0 }}>
           Distributed Fleet Forge
         </h1>
 

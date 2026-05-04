@@ -22,6 +22,10 @@ Distributed Fleet Forge: A containerized chaos lab where sovereign-tier kiosk fl
 | `node:shell:ready` | server → client | Shell is open and ready |
 | `node:shell:error` | server → client | Shell error (e.g. Docker unavailable) |
 
+## Branding
+
+`client/public/logo.png` — 512×512 transparent-background logo mark (AI-generated, Flux 1 Dev). Also used as `favicon.ico`.
+
 ## Stack
 
 - **Frontend:** React + Vite (TypeScript), react-force-graph-2d, socket.io-client
