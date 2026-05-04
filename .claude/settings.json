@@ -17,7 +17,9 @@
       "Bash(cmd /c \"pnpm exec tsc --noEmit 2>&1\")",
       "Bash(cmd.exe /c \"pnpm add dockerode && pnpm add -D @types/dockerode\")",
       "Bash(cmd.exe /c \"pnpm add @xterm/xterm @xterm/addon-fit\")",
-      "Bash(cmd.exe /c \"pnpm add dockerode @types/dockerode\")"
+      "Bash(cmd.exe /c \"pnpm add dockerode @types/dockerode\")",
+      "Bash(pnpm --filter server exec tsc --noEmit)",
+      "Bash(pnpm --filter client exec tsc --noEmit)"
     ]
   }
 }
