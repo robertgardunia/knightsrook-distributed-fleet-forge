@@ -10,7 +10,7 @@ RUN apk add --no-cache nginx
 
 # Slideshow page
 RUN mkdir -p /usr/share/nginx/html/slides
-COPY slideshow.html /usr/share/nginx/html/slideshow.html
+COPY containers/info-kiosk/slideshow.html /usr/share/nginx/html/slideshow.html
 
 # Slide images — copied from project root at build time
 # (docker-compose uses context: . so paths are relative to project root)
