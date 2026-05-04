@@ -466,8 +466,8 @@ export default function ScreenPanel({ node, isMock }: { node: FleetNode; isMock?
         </span>
       </div>
 
-      {tab === 'logs'  && (isMock ? <DemoLogsView  node={node} /> : <LogsView  node={node} />)}
-      {tab === 'shell' && (isMock ? <DemoShellView node={node} /> : <ShellView node={node} />)}
+      {tab === 'logs'  && (isMock || node.role === 'homebase' ? <DemoLogsView  node={node} /> : <LogsView  node={node} />)}
+      {tab === 'shell' && (isMock || node.role === 'homebase' ? <DemoShellView node={node} /> : <ShellView node={node} />)}
     </div>
   );
 }

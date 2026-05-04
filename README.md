@@ -59,8 +59,8 @@ Three-tier cascade autonomy: homebase → station-controllers → kiosk swarms. 
 
 | Role | Tier | Description |
 |---|---|---|
-| `homebase` | 1 | `Home` — central control plane |
-| `station-controller` | 2 | `S#` — per-station sovereign node |
+| `homebase` | 1 | `Home` — host dev server (`pnpm dev`), not a container; shell/logs use demo simulation |
+| `station-controller` | 2 | `S#` — per-station sovereign node; container names `s1-controller`…`s4-controller` match agent IDs |
 | `game-kiosk` | 3 | `KG1–KG4` — game terminals (4 per station), swarm participants |
 | `info-kiosk` | 3 | `KI1–KI2` — info displays (2 per station), swarm participants |
 

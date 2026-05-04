@@ -148,7 +148,6 @@ function ControllerScreen({ node }: { node: FleetNode }) {
 }
 
 function LiveScreen({ node, live }: { node: FleetNode; live: NodeStats }) {
-  const isKiosk = node.role === 'game-kiosk' || node.role === 'info-kiosk';
   const bg = node.role === 'game-kiosk' ? '#000514' : '#000814';
   const uptimeSecs = live.uptime;
   const ud = Math.floor(uptimeSecs / 86400);
@@ -157,11 +156,6 @@ function LiveScreen({ node, live }: { node: FleetNode; live: NodeStats }) {
 
   return (
     <div style={{ flex: 1, background: bg, padding: '16px', overflow: 'auto', fontSize: '0.68rem' }}>
-      {isKiosk && (
-        <div style={{ textAlign: 'center', marginBottom: 16, color: '#1e293b', fontSize: '0.58rem', letterSpacing: '0.2em' }}>
-          HEADLESS CONTAINER · NO DISPLAY OUTPUT
-        </div>
-      )}
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 14 }}>
         <span style={{ color: '#475569', fontSize: '0.58rem', letterSpacing: '0.12em' }}>UPTIME</span>
         <span style={{ color: '#4ade80' }}>{ud}d {uh}h {um}m</span>
@@ -190,9 +184,9 @@ function LiveScreen({ node, live }: { node: FleetNode; live: NodeStats }) {
 }
 
 function ScreenView({ node, live }: { node: FleetNode; live?: NodeStats }) {
-  if (live) return <LiveScreen node={node} live={live} />;
   if (node.role === 'game-kiosk') return <GameScreen node={node} />;
   if (node.role === 'info-kiosk') return <InfoScreen node={node} />;
+  if (live) return <LiveScreen node={node} live={live} />;
   return <ControllerScreen node={node} />;
 }
 
