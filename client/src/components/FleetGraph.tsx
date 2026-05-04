@@ -32,17 +32,15 @@ const FleetGraph = forwardRef<FleetGraphHandle, Props>(function FleetGraph({ gra
 
   useImperativeHandle(ref, () => ({
     zoomToNode(id: string) {
-      // Lock zoom immediately so ResizeObserver doesn't call zoomToFit during the
-      // panel-open transition (350ms), then center once the layout has settled.
+      // graph.nodes are mutated in-place by d3-force — same objects, live x/y
+      const node = (graph.nodes as Array<FleetNode & { x?: number; y?: number }>)
+        .find(n => n.id === id);
+      if (node?.x == null) return;
       manualZoom.current = true;
-      setTimeout(() => {
-        const node = fgRef.current?.graphData().nodes.find((n: FleetNode & { x: number; y: number }) => n.id === id);
-        if (!node) return;
-        fgRef.current?.centerAt(node.x, node.y, 600);
-        fgRef.current?.zoom(ZOOM_LEVEL[node.role] ?? 3, 600);
-      }, 380);
+      fgRef.current?.centerAt(node.x, node.y!, 600);
+      fgRef.current?.zoom(ZOOM_LEVEL[node.role] ?? 3, 600);
     },
-  }));
+  }), [graph.nodes]);
   useEffect(() => {
     if (!containerRef.current) return;
     const observer = new ResizeObserver((entries) => {
@@ -142,7 +140,7 @@ const FleetGraph = forwardRef<FleetGraphHandle, Props>(function FleetGraph({ gra
 
           ctx.beginPath();
           ctx.arc(n.x, n.y, radius, 0, 2 * Math.PI);
-          ctx.fillStyle = isDimmed ? dim(n.color) : n.color + 'cc';
+          ctx.fillStyle = isDimmed ? dim(n.color) : n.color;
           ctx.fill();
           ctx.strokeStyle = isDimmed ? dim(n.color, 0.45) : isSelected ? '#ffffff' : n.color;
           ctx.lineWidth = (isSelected ? 2 : 1.5) / globalScale;

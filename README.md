@@ -49,6 +49,8 @@ Click any node in the fleet graph to open a resizable 2×2 panel layout. Drag th
 
 Click background or the ✕ button to return to full-screen graph.
 
+The header search box filters all nodes by name/role. Selecting a result zooms and centers the graph to that node identically to clicking it directly.
+
 ## Architecture
 
 Three-tier cascade autonomy: homebase → station-controllers → kiosk swarms. Each node type carries a status (federation / island / swarm / dead) that reflects its connectivity tier. The fleet dashboard visualizes live node state as a force-directed graph.
