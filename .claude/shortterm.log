@@ -1,5 +1,5 @@
-2026-05-03T26:35:00Z|knightsrook-distributed-fleet-forge|README.md,client/src/App.tsx|Replace Start/Stop with Offline Demo/Start Lab toggle|Replaced button with mode toggle|Awaiting next task
 2026-05-03T26:40:00Z|knightsrook-distributed-fleet-forge|README.md,client/src/App.tsx|rename: Start Lab -> Online Lab|Button text updated|Awaiting next task
 2026-05-03T26:45:00Z|knightsrook-distributed-fleet-forge|client/src/App.tsx,client/src/components/ScreenPanel.tsx|Show offline placeholder in ScreenPanel when isMock|Added conditional rendering for mock mode|Awaiting next task
 2026-05-03T26:50:00Z|knightsrook-distributed-fleet-forge|client/src/components/ScreenPanel.tsx|Demo logs + interactive shell in offline mode|Added log output & shell input in mock mode|Awaiting next task
 2026-05-03T26:55:00Z|knightsrook-distributed-fleet-forge|.claude/codebook.json,.claude/settings.json,.claude/shortterm.log|Update .claude session log and settings|Session state synced|Awaiting next task
+2026-05-03T27:00:00Z|knightsrook-distributed-fleet-forge|README.md,client/src/App.tsx,client/src/components/MonitorPanel.tsx,client/src/components/StatsPanel.tsx,client/src/types/fleet.ts,server/src/index.ts,server/src/lib/containerStreams.ts|Live stats + screen for Online Lab mode|Added real-time metrics & screen streaming|Awaiting next task
