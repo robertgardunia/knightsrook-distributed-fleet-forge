@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { socket } from './socket';
-import FleetGraph from './components/FleetGraph';
+import FleetGraph, { type FleetGraphHandle } from './components/FleetGraph';
 import Sidebar from './components/Sidebar';
 import MonitorPanel from './components/MonitorPanel';
 import StatsPanel from './components/StatsPanel';
@@ -100,6 +100,7 @@ export default function App() {
   const [vSplit, setVSplit] = useState(50); // top row %
   const [searchQuery, setSearchQuery] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
+  const fgHandle = useRef<FleetGraphHandle>(null);
   const gridRef = useRef<HTMLDivElement>(null);
   const lastSelected = useRef<FleetNode | null>(null);
   if (selected) lastSelected.current = selected;
@@ -156,7 +157,7 @@ export default function App() {
 
         {/* Search */}
         <div style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
-          <SearchBox nodes={graph.nodes} onSelect={node => { setSelected(node); setSearchQuery(''); setSearchOpen(false); }} query={searchQuery} setQuery={setSearchQuery} open={searchOpen} setOpen={setSearchOpen} />
+          <SearchBox nodes={graph.nodes} onSelect={node => { setSelected(node); fgHandle.current?.zoomToNode(node.id); setSearchQuery(''); setSearchOpen(false); }} query={searchQuery} setQuery={setSearchQuery} open={searchOpen} setOpen={setSearchOpen} />
         </div>
 
         {/* Right controls */}
@@ -235,7 +236,7 @@ export default function App() {
                 <MonitorPanel node={panelNode} isMock={graph.isMock !== false} />
               </div>
               <div style={{ height: '50vh', flexShrink: 0, borderBottom: '1px solid #1e293b' }}>
-                <FleetGraph graph={graph} onNodeSelect={setSelected} selectedNodeId={selected?.id} />
+                <FleetGraph ref={fgHandle} graph={graph} onNodeSelect={setSelected} selectedNodeId={selected?.id} />
               </div>
               <div style={{ height: '50vh', flexShrink: 0, borderBottom: '1px solid #1e293b' }}>
                 <StatsPanel node={panelNode} isMock={graph.isMock !== false} />
@@ -246,7 +247,7 @@ export default function App() {
             </div>
           ) : (
             <div style={{ height: '100%' }}>
-              <FleetGraph graph={graph} onNodeSelect={setSelected} selectedNodeId={selected?.id} />
+              <FleetGraph ref={fgHandle} graph={graph} onNodeSelect={setSelected} selectedNodeId={selected?.id} />
             </div>
           )}
         </div>
@@ -280,7 +281,7 @@ export default function App() {
               borderBottom: open ? '1px solid #1e293b' : 'none',
               boxSizing: 'border-box',
             }}>
-              <FleetGraph graph={graph} onNodeSelect={setSelected} selectedNodeId={selected?.id} />
+              <FleetGraph ref={fgHandle} graph={graph} onNodeSelect={setSelected} selectedNodeId={selected?.id} />
             </div>
 
             {/* Lower-left: Stats */}

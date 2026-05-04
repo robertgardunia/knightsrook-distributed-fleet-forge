@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import ForceGraph2D from 'react-force-graph-2d';
 import { forceCollide } from 'd3-force-3d';
 import type { FleetGraph, FleetNode } from '../types/fleet';
@@ -13,18 +13,32 @@ const ZOOM_LEVEL: Record<string, number> = {
   'info-kiosk':          6,
 };
 
+export interface FleetGraphHandle {
+  zoomToNode: (id: string) => void;
+}
+
 interface Props {
   graph: FleetGraph;
   onNodeSelect: (node: FleetNode | null) => void;
   selectedNodeId?: string;
 }
 
-export default function FleetGraph({ graph, onNodeSelect, selectedNodeId }: Props) {
+const FleetGraph = forwardRef<FleetGraphHandle, Props>(function FleetGraph({ graph, onNodeSelect, selectedNodeId }, ref) {
   const containerRef = useRef<HTMLDivElement>(null);
   const fgRef = useRef<FGInstance>(null);
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
   const charge = -30;
   const manualZoom = useRef(false);
+
+  useImperativeHandle(ref, () => ({
+    zoomToNode(id: string) {
+      const node = fgRef.current?.graphData().nodes.find((n: FleetNode & { x: number; y: number }) => n.id === id);
+      if (!node) return;
+      manualZoom.current = true;
+      fgRef.current?.centerAt(node.x, node.y, 600);
+      fgRef.current?.zoom(ZOOM_LEVEL[node.role] ?? 3, 600);
+    },
+  }));
   useEffect(() => {
     if (!containerRef.current) return;
     const observer = new ResizeObserver((entries) => {
@@ -144,4 +158,6 @@ export default function FleetGraph({ graph, onNodeSelect, selectedNodeId }: Prop
 
     </div>
   );
-}
+});
+
+export default FleetGraph;
