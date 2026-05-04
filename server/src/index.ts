@@ -32,7 +32,10 @@ io.on('connection', (socket) => {
 
   // ── Fleet graph ────────────────────────────────────────────────────────────
   socket.emit('fleet:graph', getGraph());
-  socket.on('fleet:request', () => socket.emit('fleet:graph', getGraph()));
+  socket.on('fleet:request', (opts?: { mock?: boolean }) => {
+    const data = opts?.mock ? { ...buildMockFleet(), isMock: true } : getGraph();
+    socket.emit('fleet:graph', data);
+  });
 
   // ── Agent registration ─────────────────────────────────────────────────────
   socket.on('agent:register', (data) => registry.register(data));

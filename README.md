@@ -7,7 +7,7 @@ Distributed Fleet Forge: A containerized chaos lab where sovereign-tier kiosk fl
 | Event | Direction | Description |
 |---|---|---|
 | `fleet:graph` | server → client | Full fleet graph (nodes + links + `isMock` flag) |
-| `fleet:request` | client → server | Request/re-request fleet data |
+| `fleet:request` | client → server | Request/re-request fleet data. Pass `{ mock: true }` to force mock fleet regardless of live agents. |
 | `agent:register` | agent → server | Agent announces itself (`id`, `name`, `role`, `parentId`) |
 | `agent:heartbeat` | agent → server | Keepalive every 5s — node goes `dead` after 15s silence |
 | `node:logs:subscribe` | client → server | Start streaming `docker logs -f` for a node |

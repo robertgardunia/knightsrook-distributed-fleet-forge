@@ -97,6 +97,8 @@ export default function App() {
   const [selected, setSelected] = useState<FleetNode | null>(null);
   const [labBusy, setLabBusy] = useState(false);
   const [labMode, setLabMode] = useState<'demo' | 'lab'>('demo');
+  const labModeRef = useRef(labMode);
+  labModeRef.current = labMode;
   const [hSplit, setHSplit] = useState(50); // left col %
   const [vSplit, setVSplit] = useState(50); // top row %
   const [searchQuery, setSearchQuery] = useState('');
@@ -140,8 +142,11 @@ export default function App() {
     window.addEventListener('mouseup', onUp);
   }, []);
 
+  const requestGraph = useCallback(() => {
+    socket.emit('fleet:request', { mock: labModeRef.current === 'demo' });
+  }, []);
+
   useEffect(() => {
-    const requestGraph = () => socket.emit('fleet:request');
     socket.on('fleet:graph', setGraph);
     socket.on('connect', requestGraph);
     if (socket.connected) requestGraph();
@@ -149,7 +154,12 @@ export default function App() {
       socket.off('fleet:graph', setGraph);
       socket.off('connect', requestGraph);
     };
-  }, []);
+  }, [requestGraph]);
+
+  // Re-request graph whenever mode changes so the right dataset loads immediately
+  useEffect(() => {
+    if (socket.connected) requestGraph();
+  }, [labMode, requestGraph]);
 
   return (
     <div style={{ width: '100%', height: '100dvh', background: '#0f172a', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
