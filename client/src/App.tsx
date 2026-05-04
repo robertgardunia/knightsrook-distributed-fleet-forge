@@ -91,7 +91,7 @@ export default function App() {
             <div style={{ display: 'flex', border: '1px solid #1e293b', borderRadius: 3, overflow: 'hidden', marginRight: 6 }}>
               {([
                 { label: 'Offline Demo', active: graph.isMock !== false, action: 'stop'  as const },
-                { label: 'Start Lab',    active: graph.isMock === false,  action: 'start' as const },
+                { label: 'Online Lab',   active: graph.isMock === false,  action: 'start' as const },
               ] as const).map(({ label, active, action }) => (
                 <button
                   key={label}
@@ -100,7 +100,7 @@ export default function App() {
                   style={{
                     background: active ? '#0d2a1a' : 'transparent',
                     border: 'none',
-                    borderLeft: label === 'Start Lab' ? '1px solid #1e293b' : 'none',
+                    borderLeft: label === 'Online Lab' ? '1px solid #1e293b' : 'none',
                     color: active ? '#4ade80' : '#475569',
                     padding: '4px 12px',
                     fontSize: '0.65rem',
