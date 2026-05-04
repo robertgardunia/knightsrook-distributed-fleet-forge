@@ -59,7 +59,7 @@ Three-tier cascade autonomy: homebase → station-controllers → kiosk swarms. 
 | `game-kiosk` | 3 | `KG1–KG4` — game terminals (4 per station), swarm participants |
 | `info-kiosk` | 3 | `KI1–KI2` — info displays (2 per station), swarm participants |
 
-Force layout uses charge `-280` with per-link distances (homebase→station `130`, station→kiosk `60`) to keep station clusters separated.
+Force layout uses charge `-120` with per-link distances (homebase→station `80`, station→kiosk `40`) to keep station clusters separated.
 
 ### Status colors
 

@@ -41,10 +41,10 @@ export default function FleetGraph({ graph, onNodeSelect, selectedNodeId }: Prop
   // Tune forces whenever graph data changes so station clusters don't overlap
   useEffect(() => {
     if (!graph.nodes.length || !fgRef.current) return;
-    fgRef.current.d3Force('charge').strength(-280);
+    fgRef.current.d3Force('charge').strength(-120);
     fgRef.current.d3Force('link').distance((link: { source: { id?: string } | string }) => {
       const src = typeof link.source === 'object' ? link.source.id : link.source;
-      return src === 'homebase' ? 130 : 60;
+      return src === 'homebase' ? 80 : 40;
     });
   }, [graph.nodes.length]);
 
