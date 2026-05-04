@@ -46,6 +46,14 @@ function parseLine(raw: string): LogLine {
 
 const LEVELS: LogLevel[] = ['info', 'warn', 'error', 'debug'];
 
+function OfflinePlaceholder({ label }: { label: string }) {
+  return (
+    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#1e293b', fontSize: '0.7rem', letterSpacing: '0.1em' }}>
+      {label} unavailable in offline demo
+    </div>
+  );
+}
+
 function LogsView({ node }: { node: FleetNode }) {
   const [lines, setLines]       = useState<LogLine[]>([]);
   const [filterText, setFilter] = useState('');
@@ -210,7 +218,7 @@ function ShellView({ node }: { node: FleetNode }) {
 
 type Tab = 'logs' | 'shell';
 
-export default function ScreenPanel({ node }: { node: FleetNode }) {
+export default function ScreenPanel({ node, isMock }: { node: FleetNode; isMock?: boolean }) {
   const [tab, setTab] = useState<Tab>('logs');
 
   return (
@@ -242,8 +250,8 @@ export default function ScreenPanel({ node }: { node: FleetNode }) {
         </span>
       </div>
 
-      {tab === 'logs'  && <LogsView  node={node} />}
-      {tab === 'shell' && <ShellView node={node} />}
+      {tab === 'logs'  && (isMock ? <OfflinePlaceholder label="logs"  /> : <LogsView  node={node} />)}
+      {tab === 'shell' && (isMock ? <OfflinePlaceholder label="shell" /> : <ShellView node={node} />)}
     </div>
   );
 }

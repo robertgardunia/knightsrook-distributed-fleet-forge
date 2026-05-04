@@ -147,7 +147,7 @@ export default function App() {
                 <StatsPanel node={panelNode} />
               </div>
               <div style={{ height: '50vh', flexShrink: 0 }}>
-                <ScreenPanel node={panelNode} />
+                <ScreenPanel node={panelNode} isMock={graph.isMock !== false} />
               </div>
             </div>
           ) : (
@@ -210,7 +210,7 @@ export default function App() {
               pointerEvents: open ? 'auto' : 'none',
               boxSizing: 'border-box',
             }}>
-              {panelNode && <ScreenPanel node={panelNode} />}
+              {panelNode && <ScreenPanel node={panelNode} isMock={graph.isMock !== false} />}
             </div>
 
           </div>
