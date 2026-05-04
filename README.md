@@ -109,7 +109,9 @@ docker compose -f docker-compose.chaos.yml up --build
 - **`fleet-net`** — homebase ↔ station-controllers only
 - **`station-s1-net` / `station-s2-net`** — kiosks ↔ their station-controller relay only; no direct route to homebase
 
-Each station-controller runs a relay (`containers/station-controller/`) that connects upstream to homebase and listens downstream for kiosk registrations — the cascade autonomy seam. Kiosks (`containers/fleet-agent/`) connect only to their controller relay.
+Each station-controller runs a relay (`containers/station-controller/`) that connects upstream to homebase and listens downstream for kiosk registrations — the cascade autonomy seam.
+
+Game kiosks (`containers/game-kiosk/`) serve HexGL on port 8080 in attract mode: title screen with "INSERT COIN" blink → pre-recorded replay drives the ship around the track → loops. Info kiosks (`containers/info-kiosk/`) serve a slideshow of simulator guide slides on port 8080 with random 8–20s intervals between slides. Both are fully self-contained — no external dependencies at runtime.
 
 **Toxiproxy** control API is exposed on `:8474` for the gremlin driver to inject failures between tiers.
 

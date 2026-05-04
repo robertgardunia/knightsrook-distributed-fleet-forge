@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>HexGL</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #000514; overflow: hidden; width: 100vw; height: 100vh; }
+    img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .insert {
+      position: absolute;
+      bottom: 72px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: 'Arial', sans-serif;
+      font-size: 1.3rem;
+      color: #facc15;
+      letter-spacing: 0.35em;
+      text-transform: uppercase;
+      white-space: nowrap;
+      animation: blink 1.1s step-end infinite;
+    }
+    @keyframes blink { 50% { opacity: 0; } }
+  </style>
+</head>
+<body>
+  <img src="css/title.png" alt="">
+  <div class="insert">INSERT COIN TO PLAY</div>
+  <script>
+    var delay = 8000 + Math.random() * 12000;
+    setTimeout(function () {
+      window.location.href = 'index.html?attract=1';
+    }, delay);
+  </script>
+</body>
+</html>

@@ -6,6 +6,9 @@
 #
 # Kiosks connect to their station-controller relay, never homebase directly.
 # Toxiproxy control API on :8474 for the gremlin driver.
+#
+# Game kiosks serve HexGL attract mode on port 8080 (containers/game-kiosk).
+# Info kiosks serve a slide show on port 8080 (containers/info-kiosk).
 
 services:
 
@@ -39,48 +42,58 @@ services:
 
   s1-game-1:
     container_name: s1-game-1
-    build: ./containers/fleet-agent
+    build: ./containers/game-kiosk
     environment: { AGENT_ID: s1-game-1, AGENT_NAME: KG1, AGENT_ROLE: game-kiosk, AGENT_PARENT: station-s1, HOMEBASE_URL: "http://s1-controller:5021" }
+    expose: ["8080"]
     networks: [station-s1-net]
     depends_on: [s1-controller]
     restart: unless-stopped
 
   s1-game-2:
     container_name: s1-game-2
-    build: ./containers/fleet-agent
+    build: ./containers/game-kiosk
     environment: { AGENT_ID: s1-game-2, AGENT_NAME: KG2, AGENT_ROLE: game-kiosk, AGENT_PARENT: station-s1, HOMEBASE_URL: "http://s1-controller:5021" }
+    expose: ["8080"]
     networks: [station-s1-net]
     depends_on: [s1-controller]
     restart: unless-stopped
 
   s1-game-3:
     container_name: s1-game-3
-    build: ./containers/fleet-agent
+    build: ./containers/game-kiosk
     environment: { AGENT_ID: s1-game-3, AGENT_NAME: KG3, AGENT_ROLE: game-kiosk, AGENT_PARENT: station-s1, HOMEBASE_URL: "http://s1-controller:5021" }
+    expose: ["8080"]
     networks: [station-s1-net]
     depends_on: [s1-controller]
     restart: unless-stopped
 
   s1-game-4:
     container_name: s1-game-4
-    build: ./containers/fleet-agent
+    build: ./containers/game-kiosk
     environment: { AGENT_ID: s1-game-4, AGENT_NAME: KG4, AGENT_ROLE: game-kiosk, AGENT_PARENT: station-s1, HOMEBASE_URL: "http://s1-controller:5021" }
+    expose: ["8080"]
     networks: [station-s1-net]
     depends_on: [s1-controller]
     restart: unless-stopped
 
   s1-info-1:
     container_name: s1-info-1
-    build: ./containers/fleet-agent
+    build:
+      context: .
+      dockerfile: containers/info-kiosk/Dockerfile
     environment: { AGENT_ID: s1-info-1, AGENT_NAME: KI1, AGENT_ROLE: info-kiosk, AGENT_PARENT: station-s1, HOMEBASE_URL: "http://s1-controller:5021" }
+    expose: ["8080"]
     networks: [station-s1-net]
     depends_on: [s1-controller]
     restart: unless-stopped
 
   s1-info-2:
     container_name: s1-info-2
-    build: ./containers/fleet-agent
+    build:
+      context: .
+      dockerfile: containers/info-kiosk/Dockerfile
     environment: { AGENT_ID: s1-info-2, AGENT_NAME: KI2, AGENT_ROLE: info-kiosk, AGENT_PARENT: station-s1, HOMEBASE_URL: "http://s1-controller:5021" }
+    expose: ["8080"]
     networks: [station-s1-net]
     depends_on: [s1-controller]
     restart: unless-stopped
@@ -100,48 +113,58 @@ services:
 
   s2-game-1:
     container_name: s2-game-1
-    build: ./containers/fleet-agent
+    build: ./containers/game-kiosk
     environment: { AGENT_ID: s2-game-1, AGENT_NAME: KG1, AGENT_ROLE: game-kiosk, AGENT_PARENT: station-s2, HOMEBASE_URL: "http://s2-controller:5021" }
+    expose: ["8080"]
     networks: [station-s2-net]
     depends_on: [s2-controller]
     restart: unless-stopped
 
   s2-game-2:
     container_name: s2-game-2
-    build: ./containers/fleet-agent
+    build: ./containers/game-kiosk
     environment: { AGENT_ID: s2-game-2, AGENT_NAME: KG2, AGENT_ROLE: game-kiosk, AGENT_PARENT: station-s2, HOMEBASE_URL: "http://s2-controller:5021" }
+    expose: ["8080"]
     networks: [station-s2-net]
     depends_on: [s2-controller]
     restart: unless-stopped
 
   s2-game-3:
     container_name: s2-game-3
-    build: ./containers/fleet-agent
+    build: ./containers/game-kiosk
     environment: { AGENT_ID: s2-game-3, AGENT_NAME: KG3, AGENT_ROLE: game-kiosk, AGENT_PARENT: station-s2, HOMEBASE_URL: "http://s2-controller:5021" }
+    expose: ["8080"]
     networks: [station-s2-net]
     depends_on: [s2-controller]
     restart: unless-stopped
 
   s2-game-4:
     container_name: s2-game-4
-    build: ./containers/fleet-agent
+    build: ./containers/game-kiosk
     environment: { AGENT_ID: s2-game-4, AGENT_NAME: KG4, AGENT_ROLE: game-kiosk, AGENT_PARENT: station-s2, HOMEBASE_URL: "http://s2-controller:5021" }
+    expose: ["8080"]
     networks: [station-s2-net]
     depends_on: [s2-controller]
     restart: unless-stopped
 
   s2-info-1:
     container_name: s2-info-1
-    build: ./containers/fleet-agent
+    build:
+      context: .
+      dockerfile: containers/info-kiosk/Dockerfile
     environment: { AGENT_ID: s2-info-1, AGENT_NAME: KI1, AGENT_ROLE: info-kiosk, AGENT_PARENT: station-s2, HOMEBASE_URL: "http://s2-controller:5021" }
+    expose: ["8080"]
     networks: [station-s2-net]
     depends_on: [s2-controller]
     restart: unless-stopped
 
   s2-info-2:
     container_name: s2-info-2
-    build: ./containers/fleet-agent
+    build:
+      context: .
+      dockerfile: containers/info-kiosk/Dockerfile
     environment: { AGENT_ID: s2-info-2, AGENT_NAME: KI2, AGENT_ROLE: info-kiosk, AGENT_PARENT: station-s2, HOMEBASE_URL: "http://s2-controller:5021" }
+    expose: ["8080"]
     networks: [station-s2-net]
     depends_on: [s2-controller]
     restart: unless-stopped
@@ -161,48 +184,58 @@ services:
 
   s3-game-1:
     container_name: s3-game-1
-    build: ./containers/fleet-agent
+    build: ./containers/game-kiosk
     environment: { AGENT_ID: s3-game-1, AGENT_NAME: KG1, AGENT_ROLE: game-kiosk, AGENT_PARENT: station-s3, HOMEBASE_URL: "http://s3-controller:5021" }
+    expose: ["8080"]
     networks: [station-s3-net]
     depends_on: [s3-controller]
     restart: unless-stopped
 
   s3-game-2:
     container_name: s3-game-2
-    build: ./containers/fleet-agent
+    build: ./containers/game-kiosk
     environment: { AGENT_ID: s3-game-2, AGENT_NAME: KG2, AGENT_ROLE: game-kiosk, AGENT_PARENT: station-s3, HOMEBASE_URL: "http://s3-controller:5021" }
+    expose: ["8080"]
     networks: [station-s3-net]
     depends_on: [s3-controller]
     restart: unless-stopped
 
   s3-game-3:
     container_name: s3-game-3
-    build: ./containers/fleet-agent
+    build: ./containers/game-kiosk
     environment: { AGENT_ID: s3-game-3, AGENT_NAME: KG3, AGENT_ROLE: game-kiosk, AGENT_PARENT: station-s3, HOMEBASE_URL: "http://s3-controller:5021" }
+    expose: ["8080"]
     networks: [station-s3-net]
     depends_on: [s3-controller]
     restart: unless-stopped
 
   s3-game-4:
     container_name: s3-game-4
-    build: ./containers/fleet-agent
+    build: ./containers/game-kiosk
     environment: { AGENT_ID: s3-game-4, AGENT_NAME: KG4, AGENT_ROLE: game-kiosk, AGENT_PARENT: station-s3, HOMEBASE_URL: "http://s3-controller:5021" }
+    expose: ["8080"]
     networks: [station-s3-net]
     depends_on: [s3-controller]
     restart: unless-stopped
 
   s3-info-1:
     container_name: s3-info-1
-    build: ./containers/fleet-agent
+    build:
+      context: .
+      dockerfile: containers/info-kiosk/Dockerfile
     environment: { AGENT_ID: s3-info-1, AGENT_NAME: KI1, AGENT_ROLE: info-kiosk, AGENT_PARENT: station-s3, HOMEBASE_URL: "http://s3-controller:5021" }
+    expose: ["8080"]
     networks: [station-s3-net]
     depends_on: [s3-controller]
     restart: unless-stopped
 
   s3-info-2:
     container_name: s3-info-2
-    build: ./containers/fleet-agent
+    build:
+      context: .
+      dockerfile: containers/info-kiosk/Dockerfile
     environment: { AGENT_ID: s3-info-2, AGENT_NAME: KI2, AGENT_ROLE: info-kiosk, AGENT_PARENT: station-s3, HOMEBASE_URL: "http://s3-controller:5021" }
+    expose: ["8080"]
     networks: [station-s3-net]
     depends_on: [s3-controller]
     restart: unless-stopped
@@ -222,48 +255,58 @@ services:
 
   s4-game-1:
     container_name: s4-game-1
-    build: ./containers/fleet-agent
+    build: ./containers/game-kiosk
     environment: { AGENT_ID: s4-game-1, AGENT_NAME: KG1, AGENT_ROLE: game-kiosk, AGENT_PARENT: station-s4, HOMEBASE_URL: "http://s4-controller:5021" }
+    expose: ["8080"]
     networks: [station-s4-net]
     depends_on: [s4-controller]
     restart: unless-stopped
 
   s4-game-2:
     container_name: s4-game-2
-    build: ./containers/fleet-agent
+    build: ./containers/game-kiosk
     environment: { AGENT_ID: s4-game-2, AGENT_NAME: KG2, AGENT_ROLE: game-kiosk, AGENT_PARENT: station-s4, HOMEBASE_URL: "http://s4-controller:5021" }
+    expose: ["8080"]
     networks: [station-s4-net]
     depends_on: [s4-controller]
     restart: unless-stopped
 
   s4-game-3:
     container_name: s4-game-3
-    build: ./containers/fleet-agent
+    build: ./containers/game-kiosk
     environment: { AGENT_ID: s4-game-3, AGENT_NAME: KG3, AGENT_ROLE: game-kiosk, AGENT_PARENT: station-s4, HOMEBASE_URL: "http://s4-controller:5021" }
+    expose: ["8080"]
     networks: [station-s4-net]
     depends_on: [s4-controller]
     restart: unless-stopped
 
   s4-game-4:
     container_name: s4-game-4
-    build: ./containers/fleet-agent
+    build: ./containers/game-kiosk
     environment: { AGENT_ID: s4-game-4, AGENT_NAME: KG4, AGENT_ROLE: game-kiosk, AGENT_PARENT: station-s4, HOMEBASE_URL: "http://s4-controller:5021" }
+    expose: ["8080"]
     networks: [station-s4-net]
     depends_on: [s4-controller]
     restart: unless-stopped
 
   s4-info-1:
     container_name: s4-info-1
-    build: ./containers/fleet-agent
+    build:
+      context: .
+      dockerfile: containers/info-kiosk/Dockerfile
     environment: { AGENT_ID: s4-info-1, AGENT_NAME: KI1, AGENT_ROLE: info-kiosk, AGENT_PARENT: station-s4, HOMEBASE_URL: "http://s4-controller:5021" }
+    expose: ["8080"]
     networks: [station-s4-net]
     depends_on: [s4-controller]
     restart: unless-stopped
 
   s4-info-2:
     container_name: s4-info-2
-    build: ./containers/fleet-agent
+    build:
+      context: .
+      dockerfile: containers/info-kiosk/Dockerfile
     environment: { AGENT_ID: s4-info-2, AGENT_NAME: KI2, AGENT_ROLE: info-kiosk, AGENT_PARENT: station-s4, HOMEBASE_URL: "http://s4-controller:5021" }
+    expose: ["8080"]
     networks: [station-s4-net]
     depends_on: [s4-controller]
     restart: unless-stopped
