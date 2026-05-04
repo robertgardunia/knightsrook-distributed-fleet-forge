@@ -67,23 +67,13 @@ function StatsView({ node, live }: { node: FleetNode; live?: NodeStats }) {
   );
 }
 
+const HEXGL_SCREENS = ['/games/hexgl-title.png', '/games/hexgl-gameover.jpg'];
+
 function GameScreen({ node }: { node: FleetNode }) {
-  const s = seed(node.id);
-  const score = (s * 137) % 99800;
-  const lives = (s % 3) + 1;
+  const src = HEXGL_SCREENS[seed(node.id) % HEXGL_SCREENS.length];
   return (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#000514', gap: 8 }}>
-      <div style={{ fontSize: '0.6rem', color: '#475569', letterSpacing: '0.3em' }}>STATION ARCADE</div>
-      <div style={{ fontSize: '2.2rem', color: '#facc15', fontWeight: 700, letterSpacing: '0.1em' }}>
-        {score.toLocaleString().padStart(6, '0')}
-      </div>
-      <div style={{ fontSize: '0.62rem', color: '#4ade80', letterSpacing: '0.1em' }}>▶ GAME IN PROGRESS</div>
-      <div style={{ marginTop: 16, display: 'flex', gap: 8 }}>
-        {[1, 2, 3].map(i => (
-          <div key={i} style={{ width: 10, height: 10, borderRadius: '50%', background: i <= lives ? '#f87171' : '#1e293b', border: '1px solid #334155' }} />
-        ))}
-      </div>
-      <div style={{ fontSize: '0.58rem', color: '#334155', letterSpacing: '0.1em' }}>LIVES</div>
+    <div style={{ flex: 1, overflow: 'hidden', background: '#000514' }}>
+      <img src={src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', opacity: 0.92 }} />
     </div>
   );
 }
