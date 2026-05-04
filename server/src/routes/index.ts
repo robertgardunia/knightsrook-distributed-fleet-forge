@@ -11,6 +11,7 @@ function runCompose(args: string[]) {
     cwd: projectRoot,
     detached: true,
     stdio: 'ignore',
+    windowsHide: true,
   });
   child.unref();
 }
