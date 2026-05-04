@@ -105,10 +105,11 @@ export default function App() {
   const [searchOpen, setSearchOpen] = useState(false);
   const fgHandle = useRef<FleetGraphHandle>(null);
   const gridRef = useRef<HTMLDivElement>(null);
-  // In lab mode, hide mock data until real agents connect
-  const visibleGraph = labMode === 'lab' && graph.isMock !== false
-    ? { nodes: [], links: [], isMock: true }
-    : graph;
+  const visibleGraph = (() => {
+    if (labMode === 'lab'  && graph.isMock !== false) return { nodes: [], links: [], isMock: true  as const };
+    if (labMode === 'demo' && graph.isMock !== true)  return { nodes: [], links: [], isMock: false as const };
+    return graph;
+  })();
 
   const lastSelected = useRef<FleetNode | null>(null);
   if (selected) lastSelected.current = selected;
@@ -146,18 +147,27 @@ export default function App() {
     socket.emit('fleet:request', { mock: labModeRef.current === 'demo' });
   }, []);
 
+  const handleGraph = useCallback((data: FleetGraphData) => {
+    if (labModeRef.current === 'demo' && data.isMock !== true) {
+      requestGraph();
+      return;
+    }
+    setGraph(data);
+  }, [requestGraph]);
+
   useEffect(() => {
-    socket.on('fleet:graph', setGraph);
+    socket.on('fleet:graph', handleGraph);
     socket.on('connect', requestGraph);
     if (socket.connected) requestGraph();
     return () => {
-      socket.off('fleet:graph', setGraph);
+      socket.off('fleet:graph', handleGraph);
       socket.off('connect', requestGraph);
     };
-  }, [requestGraph]);
+  }, [handleGraph, requestGraph]);
 
-  // Re-request graph whenever mode changes so the right dataset loads immediately
+  // On mode change: clear graph immediately then fetch correct dataset
   useEffect(() => {
+    setGraph({ nodes: [], links: [] });
     if (socket.connected) requestGraph();
   }, [labMode, requestGraph]);
 

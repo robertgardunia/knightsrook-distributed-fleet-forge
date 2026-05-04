@@ -88,8 +88,8 @@ The header has a two-mode segmented toggle:
 
 | Mode | Behavior |
 |---|---|
-| **Offline Demo** | Default. Mock fleet, no containers needed. Switching to it calls `POST /api/chaos/stop` (spins down any running lab). |
-| **Online Lab** | Calls `POST /api/chaos/start` → `docker compose -f docker-compose.chaos.yml up --build -d`. Station controllers connect back to the host dev server via `host.docker.internal:5020` (Docker Desktop resolves this automatically). Once real agents register, `isMock` on `fleet:graph` flips to `false`. |
+| **Offline Demo** | Default. Mock fleet, no containers needed. Switching to it calls `POST /api/chaos/stop` (spins down any running lab). Graph is cleared and rebuilt from mock data — live nodes never bleed through. |
+| **Online Lab** | Calls `POST /api/chaos/start` → `docker compose -f docker-compose.chaos.yml up --build -d`. Station controllers connect back to the host dev server via `host.docker.internal:5020` (Docker Desktop resolves this automatically). Graph clears on switch; "Forging Network" overlay shows until real agents register and `isMock` flips to `false`. |
 
 > **Windows note:** Vite proxy targets use `127.0.0.1` instead of `localhost` to avoid the IPv6/IPv4 mismatch in Node 18+ on Windows.
 
