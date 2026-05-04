@@ -19,9 +19,14 @@ function useIsMobile() {
   return isMobile;
 }
 
+async function callChaos(action: 'start' | 'stop') {
+  await fetch(`/api/chaos/${action}`, { method: 'POST' });
+}
+
 export default function App() {
   const [graph, setGraph] = useState<FleetGraphData>({ nodes: [], links: [] });
   const [selected, setSelected] = useState<FleetNode | null>(null);
+  const [labBusy, setLabBusy] = useState(false);
   const lastSelected = useRef<FleetNode | null>(null);
   if (selected) lastSelected.current = selected;
   const panelNode = selected ?? lastSelected.current;
@@ -77,6 +82,31 @@ export default function App() {
               ✕ {panelNode?.name}
             </button>
           </div>
+
+          {/* Chaos lab toggle */}
+          <button
+            disabled={labBusy}
+            onClick={async () => {
+              setLabBusy(true);
+              await callChaos(graph.isMock === false ? 'stop' : 'start');
+              setTimeout(() => setLabBusy(false), 1500);
+            }}
+            style={{
+              background: graph.isMock === false ? '#1a0a0a' : '#0a1a0a',
+              border: `1px solid ${graph.isMock === false ? '#7f1d1d' : '#14532d'}`,
+              color: graph.isMock === false ? '#f87171' : '#4ade80',
+              padding: '4px 12px',
+              fontSize: '0.68rem',
+              cursor: labBusy ? 'default' : 'pointer',
+              borderRadius: 2,
+              letterSpacing: '0.08em',
+              opacity: labBusy ? 0.6 : 1,
+              transition: 'all 0.2s ease',
+              marginRight: 4,
+            }}
+          >
+            {labBusy ? '…' : graph.isMock === false ? 'Stop Lab' : 'Start Lab'}
+          </button>
 
           {/* Nav items */}
           {(['Fleet', 'Alerts', 'Settings'] as const).map(label => (

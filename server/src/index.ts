@@ -17,7 +17,8 @@ const registry = new FleetRegistry(() => {
 });
 
 function getGraph() {
-  return (USE_MOCK || registry.size === 0) ? buildMockFleet() : registry.buildGraph();
+  const isMock = USE_MOCK || registry.size === 0;
+  return { ...(isMock ? buildMockFleet() : registry.buildGraph()), isMock };
 }
 
 io.on('connection', (socket) => {

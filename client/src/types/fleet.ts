@@ -18,4 +18,5 @@ export interface FleetLink {
 export interface FleetGraph {
   nodes: FleetNode[];
   links: FleetLink[];
+  isMock?: boolean;
 }

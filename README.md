@@ -6,7 +6,7 @@ Distributed Fleet Forge: A containerized chaos lab where sovereign-tier kiosk fl
 
 | Event | Direction | Description |
 |---|---|---|
-| `fleet:graph` | server → client | Full fleet graph (nodes + links) |
+| `fleet:graph` | server → client | Full fleet graph (nodes + links + `isMock` flag) |
 | `fleet:request` | client → server | Request/re-request fleet data |
 | `agent:register` | agent → server | Agent announces itself (`id`, `name`, `role`, `parentId`) |
 | `agent:heartbeat` | agent → server | Keepalive every 5s — node goes `dead` after 15s silence |
@@ -73,6 +73,8 @@ cp .env.example .env
 pnpm install
 pnpm dev
 ```
+
+The header **Start Lab** button fires `POST /api/chaos/start` → `docker compose -f docker-compose.chaos.yml up --build -d`. Once agents register the button switches to **Stop Lab** (`POST /api/chaos/stop` → `docker compose … down`). The `isMock` flag on `fleet:graph` drives the button state.
 
 > **Windows note:** Vite proxy targets use `127.0.0.1` instead of `localhost` to avoid the IPv6/IPv4 mismatch in Node 18+ on Windows.
 
