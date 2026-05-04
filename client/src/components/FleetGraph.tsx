@@ -101,6 +101,8 @@ export default function FleetGraph({ graph, onNodeSelect, selectedNodeId }: Prop
         nodeCanvasObject={(node, ctx, globalScale) => {
           const n = node as unknown as FleetNode & { x: number; y: number };
           const isSelected = n.id === selectedNodeId;
+          const isDimmed = !!selectedNodeId && !isSelected;
+          const isKiosk = n.role === 'game-kiosk' || n.role === 'info-kiosk';
           const radius = Math.sqrt(n.val) * 3;
 
           if (isSelected) {
@@ -113,16 +115,16 @@ export default function FleetGraph({ graph, onNodeSelect, selectedNodeId }: Prop
 
           ctx.beginPath();
           ctx.arc(n.x, n.y, radius, 0, 2 * Math.PI);
-          ctx.fillStyle = n.color + 'cc';
+          ctx.fillStyle = n.color + (isDimmed ? '55' : 'cc');
           ctx.fill();
-          ctx.strokeStyle = isSelected ? '#ffffff' : n.color;
+          ctx.strokeStyle = isDimmed ? n.color + '44' : isSelected ? '#ffffff' : n.color;
           ctx.lineWidth = (isSelected ? 2 : 1.5) / globalScale;
           ctx.stroke();
 
           if (globalScale > 1.2 || n.role === 'homebase' || n.role === 'station-controller') {
-            const fontSize = Math.max(6, 10 / globalScale);
+            const fontSize = Math.max(isKiosk ? 5 : 6, (isKiosk ? 8 : 10) / globalScale);
             ctx.font = `${fontSize}px monospace`;
-            ctx.fillStyle = '#f1f5f9';
+            ctx.fillStyle = isDimmed ? '#f1f5f944' : '#f1f5f9';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText(n.name, n.x, n.y);
