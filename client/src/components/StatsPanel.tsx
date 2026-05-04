@@ -150,24 +150,12 @@ function InfoScreen({ node }: { node: FleetNode }) {
   );
 }
 
-function ControllerScreen({ node }: { node: FleetNode }) {
-  const s = seed(node.id);
-  const rows = [
-    ['FLEET AGENT',   'running'],
-    ['TAILSCALE',     'connected'],
-    ['SYNC QUEUE',    '0 pending'],
-    ['UPTIME',        `${s % 7}d ${(s * 3) % 24}h`],
-    ['KIOSKS ONLINE', `${(s % 3) + 7} / 9`],
-  ];
+function NoGuiScreen() {
   return (
-    <div style={{ flex: 1, background: '#000814', padding: '16px', overflow: 'auto', fontSize: '0.68rem' }}>
-      <div style={{ color: '#475569', fontSize: '0.58rem', letterSpacing: '0.15em', marginBottom: 14 }}>SYSTEM STATUS</div>
-      {rows.map(([label, value]) => (
-        <div key={label} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-          <span style={{ color: '#475569' }}>{label}</span>
-          <span style={{ color: '#4ade80' }}>{value}</span>
-        </div>
-      ))}
+    <div style={{ flex: 1, background: '#000814', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <span style={{ color: '#1e3a5f', fontSize: '0.62rem', letterSpacing: '0.2em', textTransform: 'uppercase' }}>
+        No display output — headless node
+      </span>
     </div>
   );
 }
@@ -208,11 +196,10 @@ function LiveScreen({ node, live }: { node: FleetNode; live: NodeStats }) {
   );
 }
 
-function ScreenView({ node, live, isMock }: { node: FleetNode; live?: NodeStats; isMock?: boolean }) {
+function ScreenView({ node, isMock }: { node: FleetNode; isMock?: boolean }) {
   if (node.role === 'game-kiosk') return isMock ? <GameScreen node={node} /> : <LiveKioskScreen node={node} />;
   if (node.role === 'info-kiosk') return isMock ? <InfoScreen node={node} /> : <LiveKioskScreen node={node} />;
-  if (live) return <LiveScreen node={node} live={live} />;
-  return <ControllerScreen node={node} />;
+  return <NoGuiScreen />;
 }
 
 type Tab = 'stats' | 'screen';
@@ -266,7 +253,7 @@ export default function StatsPanel({ node, isMock }: { node: FleetNode; isMock?:
 
       <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
         {tab === 'stats'  && <StatsView  node={node} live={liveStats} />}
-        {tab === 'screen' && <ScreenView node={node} live={liveStats} isMock={isMock} />}
+        {tab === 'screen' && <ScreenView node={node} isMock={isMock} />}
       </div>
     </div>
   );
