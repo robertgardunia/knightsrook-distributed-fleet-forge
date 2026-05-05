@@ -33,6 +33,7 @@ Node history is held in-memory (no external database). Stats are sampled every 5
 | Endpoint | Description |
 |---|---|
 | `GET /api/fleet` | Current fleet graph as `{ nodes[], links[] }` — live registry only (no mock fallback). |
+| `GET /api/chaos/ready` | Returns `{ ready: true }` once the lab homebase container is answering on `:5025`. Polled by the dashboard before connecting the fleet socket — prevents `ERR_CONNECTION_REFUSED` spam during container startup. |
 | `GET /api/telemetry/:nodeId` | Returns `{ nodeId, windowMs, stats[], events[] }` for the node. Optional `?window=<ms>` param (default 5 minutes). |
 
 Each station controller also exposes its own telemetry HTTP server (same port as the relay, `:5021`) for homebase pull-sync:

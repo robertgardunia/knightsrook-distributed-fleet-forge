@@ -174,12 +174,31 @@ export default function App() {
 
   // On mode change: reconnect socket to the right server, clear stale graph.
   // Skips on mount — socket already connected to the dev server via Vite proxy.
+  // For lab mode: poll /api/chaos/ready (server-side probe) before connecting —
+  // avoids ERR_CONNECTION_REFUSED spam in the browser console.
   const mountedRef = useRef(false);
   useEffect(() => {
     if (!mountedRef.current) { mountedRef.current = true; return; }
     setGraph({ nodes: [], links: [] });
-    reconnectTo(labMode === 'lab' ? LAB_SERVER : window.location.origin);
-    // requestGraph fires via the socket 'connect' event handler above
+
+    if (labMode !== 'lab') {
+      reconnectTo(window.location.origin);
+      return;
+    }
+
+    let cancelled = false;
+    async function waitForLab() {
+      while (!cancelled) {
+        try {
+          const r = await fetch('/api/chaos/ready');
+          const { ready } = await r.json() as { ready: boolean };
+          if (ready && !cancelled) { reconnectTo(LAB_SERVER); return; }
+        } catch { /* proxy unreachable — shouldn't happen */ }
+        await new Promise(res => setTimeout(res, 2000));
+      }
+    }
+    waitForLab();
+    return () => { cancelled = true; };
   }, [labMode]);
 
   return (

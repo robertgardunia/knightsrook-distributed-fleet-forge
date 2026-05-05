@@ -26,6 +26,18 @@ export function createRouter(registry: FleetRegistry) {
     res.json({ success: true, data: { status: 'ok' }, error: undefined });
   });
 
+  router.get('/chaos/ready', async (_req, res) => {
+    try {
+      const ac = new AbortController();
+      const timer = setTimeout(() => ac.abort(), 1500);
+      await fetch('http://127.0.0.1:5025/api/fleet', { signal: ac.signal });
+      clearTimeout(timer);
+      res.json({ ready: true });
+    } catch {
+      res.json({ ready: false });
+    }
+  });
+
   router.post('/chaos/start', (_req, res) => {
     try {
       registry.clear();
