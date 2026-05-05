@@ -404,7 +404,7 @@ export default function App() {
       )}
       <AnimationController />
       <FiremanPanel />
-      <PlaybookPanel apiBase={labMode === 'lab' ? LAB_SERVER : ''} />
+      {labMode === 'lab' && !isForging && <PlaybookPanel apiBase={LAB_SERVER} />}
     </div>
   );
 }
