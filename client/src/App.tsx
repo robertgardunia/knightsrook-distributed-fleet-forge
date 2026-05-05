@@ -106,6 +106,8 @@ export default function App() {
   labModeRef.current = labMode;
   const [hSplit, setHSplit] = useState(50); // left col %
   const [vSplit, setVSplit] = useState(50); // top row %
+  const [labConnected, setLabConnected] = useState(false);
+  const [chaosFiring, setChaosFiring] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
   const fgHandle = useRef<FleetGraphHandle>(null);
@@ -172,6 +174,17 @@ export default function App() {
     };
   }, [handleGraph, requestGraph]);
 
+  useEffect(() => {
+    const onConnect    = () => setLabConnected(labModeRef.current === 'lab');
+    const onDisconnect = () => setLabConnected(false);
+    socket.on('connect',    onConnect);
+    socket.on('disconnect', onDisconnect);
+    return () => {
+      socket.off('connect',    onConnect);
+      socket.off('disconnect', onDisconnect);
+    };
+  }, []);
+
   // On mode change: reconnect socket to the right server, clear stale graph.
   // Skips on mount — socket already connected to the dev server via Vite proxy.
   // For lab mode: poll /api/chaos/ready (server-side probe) before connecting —
@@ -219,18 +232,6 @@ export default function App() {
         {/* Right controls */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 2, flexShrink: 0 }}>
 
-          {/* Refresh button */}
-          <button
-            onClick={requestGraph}
-            title="Refresh fleet"
-            style={{ background: 'transparent', border: '1px solid #1e293b', color: '#475569', width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', borderRadius: 2, padding: 0, marginRight: 4, flexShrink: 0 }}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" viewBox="0 0 16 16">
-              <path fillRule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2z"/>
-              <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466"/>
-            </svg>
-          </button>
-
           {/* Close node button */}
           <div style={{
             opacity: open ? 1 : 0,
@@ -275,22 +276,27 @@ export default function App() {
             ))}
           </div>
 
-          {/* Trigger chaos — only in live lab mode */}
-          {labMode === 'lab' && !isForging && (
+          {/* Trigger chaos — only when lab socket is live */}
+          {labConnected && !isForging && (
             <button
-              onClick={() => callChaos('trigger')}
+              disabled={chaosFiring}
+              onClick={async () => {
+                setChaosFiring(true);
+                await callChaos('trigger');
+                setTimeout(() => setChaosFiring(false), 1500);
+              }}
               title="Trigger one chaos cycle now"
               style={{
-                background: '#1a0a0a', border: '1px solid #7f1d1d',
-                color: '#fca5a5', padding: '4px 11px',
-                fontSize: '0.65rem', cursor: 'pointer', borderRadius: 2,
-                letterSpacing: '0.08em', marginRight: 4,
+                background: chaosFiring ? '#2d0f0f' : '#1a0a0a',
+                border: '1px solid #7f1d1d',
+                color: chaosFiring ? '#f87171' : '#fca5a5',
+                padding: '4px 11px', fontSize: '0.65rem',
+                cursor: chaosFiring ? 'default' : 'pointer',
+                borderRadius: 2, letterSpacing: '0.08em', marginRight: 4,
                 transition: 'all 0.15s ease',
               }}
-              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#2d0f0f'; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = '#1a0a0a'; }}
             >
-              ⚡ Chaos
+              {chaosFiring ? '⚡ firing…' : '⚡ Chaos'}
             </button>
           )}
 
@@ -373,6 +379,23 @@ export default function App() {
                   <span className="forging-label">Forging Network</span>
                 </div>
               )}
+              {/* Refresh button — top-right corner of graph panel */}
+              <button
+                onClick={requestGraph}
+                title="Refresh fleet"
+                style={{
+                  position: 'absolute', top: 8, right: 8, zIndex: 10,
+                  background: 'rgba(13,31,53,0.85)', border: '1px solid #1e293b',
+                  color: '#475569', width: 26, height: 26,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  cursor: 'pointer', borderRadius: 3, padding: 0,
+                }}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16">
+                  <path fillRule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2z"/>
+                  <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466"/>
+                </svg>
+              </button>
             </div>
 
             {/* Lower-left: Stats */}
@@ -454,7 +477,7 @@ export default function App() {
       )}
       <AnimationController />
       <FiremanPanel />
-      {labMode === 'lab' && !isForging && <PlaybookPanel apiBase={LAB_SERVER} />}
+      {labConnected && !isForging && <PlaybookPanel apiBase={LAB_SERVER} />}
     </div>
   );
 }
