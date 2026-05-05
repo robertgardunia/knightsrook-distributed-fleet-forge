@@ -2,7 +2,7 @@
 FROM node:20-alpine AS build
 WORKDIR /build
 RUN apk add --no-cache python3 make g++
-COPY server/package.json server/package-lock.json* ./
+COPY server/package.json ./
 RUN npm install
 COPY server/src ./src
 COPY server/tsconfig.json ./
