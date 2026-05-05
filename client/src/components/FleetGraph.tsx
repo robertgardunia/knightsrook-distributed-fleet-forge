@@ -29,7 +29,7 @@ const FleetGraph = forwardRef<FleetGraphHandle, Props>(function FleetGraph({ gra
   const containerRef = useRef<HTMLDivElement>(null);
   const fgRef = useRef<FGInstance>(null);
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
-  const charge = -90;
+  const charge = -60;
   const manualZoom = useRef(false);
 
   useImperativeHandle(ref, () => ({
@@ -67,7 +67,7 @@ const FleetGraph = forwardRef<FleetGraphHandle, Props>(function FleetGraph({ gra
     fgRef.current.d3Force('charge').strength(charge);
     fgRef.current.d3Force('link').distance((link: { source: { id?: string } | string }) => {
       const src = typeof link.source === 'object' ? link.source.id : link.source;
-      return src === 'homebase' ? 70 : 45;
+      return src === 'homebase' ? 38 : 22;
     });
     fgRef.current.d3Force('collide', forceCollide((node: FleetNode) => Math.sqrt(node.val) * 3 + 10));
     fgRef.current.d3ReheatSimulation();
