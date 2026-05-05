@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { spawn } from 'child_process';
 import path from 'path';
 import type { FleetRegistry } from '../lib/fleetRegistry.js';
+import { getHistory } from '../lib/telemetry.js';
 
 // Project root is one level up from the server/ directory.
 const projectRoot = path.resolve(process.cwd(), '..');
@@ -42,6 +43,11 @@ export function createRouter(registry: FleetRegistry) {
     } catch (err) {
       res.status(500).json({ success: false, error: String(err) });
     }
+  });
+
+  router.get('/telemetry/:nodeId', (req, res) => {
+    const windowMs = Number(req.query.window) || 300_000;
+    res.json(getHistory(req.params.nodeId, windowMs));
   });
 
   return router;

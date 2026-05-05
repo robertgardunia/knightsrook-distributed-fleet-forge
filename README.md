@@ -25,6 +25,14 @@ Distributed Fleet Forge: A containerized chaos lab where sovereign-tier kiosk fl
 | `node:stats:unsubscribe` | client → server | Stop stats stream |
 | `node:stats:data` | server → client | Stats snapshot (cpu, mem, net rates, uptime, process list) |
 
+## Telemetry API
+
+Node history is persisted to SQLite at `server/data/telemetry.db` (or `$TELEMETRY_DB`). Two tables: `node_stats` (sampled every 5s) and `node_events` (register / alerting / dead / recovered). Used by the recovery agent to distinguish degradation curves from instant failures and detect endemic instability.
+
+| Endpoint | Description |
+|---|---|
+| `GET /api/telemetry/:nodeId` | Returns `{ nodeId, windowMs, stats[], events[] }` for the node. Optional `?window=<ms>` param (default 5 minutes). |
+
 ## Branding
 
 `client/public/logo.png` — 512×512 transparent-background logo mark (AI-generated, Flux 1 Dev). Also used as `favicon.ico`.
@@ -33,7 +41,7 @@ Distributed Fleet Forge: A containerized chaos lab where sovereign-tier kiosk fl
 
 - **Frontend:** React + Vite (TypeScript), react-force-graph-2d, socket.io-client
 - **Backend:** Express (TypeScript), socket.io
-- **Database:** MySQL
+- **Telemetry:** SQLite (better-sqlite3, WAL mode) — embedded in homebase, no external service required
 - **Deploy:** Docker
 
 ## Dashboard

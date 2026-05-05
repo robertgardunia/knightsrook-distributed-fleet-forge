@@ -33,9 +33,11 @@ interface AgentRecord {
 export class FleetRegistry {
   private agents = new Map<string, AgentRecord>();
   private onChange: () => void;
+  private onEvent: (nodeId: string, event: string) => void;
 
-  constructor(onChange: () => void) {
+  constructor(onChange: () => void, onEvent?: (nodeId: string, event: string) => void) {
     this.onChange = onChange;
+    this.onEvent = onEvent ?? (() => {});
     setInterval(() => this.checkTimeouts(), 5_000);
   }
 
@@ -51,6 +53,7 @@ export class FleetRegistry {
       alerting: false,
     });
     console.log(`[registry] registered ${data.id} (${data.role})`);
+    this.onEvent(data.id, 'register');
     this.onChange();
   }
 
@@ -64,6 +67,7 @@ export class FleetRegistry {
     if (wasDead) {
       agent.status = 'federation';
       console.log(`[registry] ${id} recovered`);
+      this.onEvent(id, 'recovered');
       this.onChange();
     } else if (wasAlerting) {
       this.onChange();
@@ -121,9 +125,11 @@ export class FleetRegistry {
         agent.status   = 'dead';
         agent.alerting = false;
         console.log(`[registry] ${agent.id} timed out → dead`);
+        this.onEvent(agent.id, 'dead');
         changed = true;
       } else if (agent.status !== 'dead' && age > ALERT_THRESHOLD_MS && !agent.alerting) {
         agent.alerting = true;
+        this.onEvent(agent.id, 'alerting');
         changed = true;
       }
     }

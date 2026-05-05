@@ -1,6 +1,7 @@
 # Stage 1 — compile the server
 FROM node:20-alpine AS build
 WORKDIR /build
+RUN apk add --no-cache python3 make g++
 COPY server/package.json server/package-lock.json* ./
 RUN npm install
 COPY server/src ./src
@@ -11,8 +12,9 @@ RUN npm run build
 FROM node:20-alpine
 WORKDIR /app
 COPY --from=build /build/package.json ./
-RUN npm install --omit=dev
+COPY --from=build /build/node_modules ./node_modules
 COPY --from=build /build/dist ./dist
+RUN mkdir -p /app/data
 
 ENV PORT=5020
 ENV NODE_ENV=production

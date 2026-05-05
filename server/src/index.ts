@@ -5,13 +5,15 @@ import { createApp } from './app.js';
 import { buildMockFleet } from './lib/mockFleet.js';
 import { FleetRegistry } from './lib/fleetRegistry.js';
 import { streamLogs, openShell, type ShellHandle, streamStats, type NodeStats } from './lib/containerStreams.js';
+import { recordStats, recordEvent } from './lib/telemetry.js';
 
 const PORT     = Number(process.env.PORT) || 5020;
 const USE_MOCK = process.env.USE_MOCK === 'true';
 
-const registry = new FleetRegistry(() => {
-  io.emit('fleet:graph', getGraph());
-});
+const registry = new FleetRegistry(
+  () => { io.emit('fleet:graph', getGraph()); },
+  recordEvent,
+);
 
 const httpServer = createServer(createApp(registry));
 const io = new Server(httpServer, { cors: { origin: '*' } });
@@ -65,7 +67,10 @@ io.on('connection', (socket) => {
     const ac = new AbortController();
     aborts.set(key, ac);
     try {
-      await streamStats(nodeId, (stats: NodeStats) => socket.emit('node:stats:data', { nodeId, stats }), ac.signal);
+      await streamStats(nodeId, (stats: NodeStats) => {
+        socket.emit('node:stats:data', { nodeId, stats });
+        recordStats(nodeId, stats);
+      }, ac.signal);
     } catch (err) {
       socket.emit('node:stats:error', { nodeId, message: String(err) });
     }
