@@ -1,2 +1,1 @@
-// Must run before any module import — sets telemetry DB to in-memory SQLite
-process.env.TELEMETRY_DB = ':memory:';
+// test setup placeholder — no pre-test configuration needed

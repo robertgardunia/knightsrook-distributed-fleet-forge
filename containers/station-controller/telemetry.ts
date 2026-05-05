@@ -1,61 +1,55 @@
-import Database from 'better-sqlite3';
-import { mkdirSync } from 'fs';
+import { readFileSync, writeFileSync, mkdirSync } from 'fs';
 import path from 'path';
 
-const DB_PATH = process.env.TELEMETRY_DB ?? path.resolve(process.cwd(), 'data', 'telemetry.db');
-mkdirSync(path.dirname(DB_PATH), { recursive: true });
+const DATA_PATH = path.resolve(process.cwd(), 'data', 'telemetry.json');
+const MAX_EVENTS = 10_000;
 
-const db = new Database(DB_PATH);
-db.pragma('journal_mode = WAL');
+interface EventRecord {
+  nodeId: string;
+  ts:     number;
+  event:  string;
+  meta:   unknown;
+}
 
-db.exec(`
-  CREATE TABLE IF NOT EXISTS node_events (
-    id      INTEGER PRIMARY KEY AUTOINCREMENT,
-    node_id TEXT    NOT NULL,
-    event   TEXT    NOT NULL,
-    ts      INTEGER NOT NULL,
-    meta    TEXT
-  );
-  CREATE INDEX IF NOT EXISTS idx_events ON node_events (node_id, ts);
-`);
+function load(): EventRecord[] {
+  try {
+    return JSON.parse(readFileSync(DATA_PATH, 'utf8')) as EventRecord[];
+  } catch {
+    return [];
+  }
+}
 
-const insertEvent = db.prepare(
-  `INSERT INTO node_events (node_id, event, ts, meta) VALUES (?, ?, ?, ?)`
-);
+function save(evts: EventRecord[]): void {
+  try {
+    mkdirSync(path.dirname(DATA_PATH), { recursive: true });
+    writeFileSync(DATA_PATH, JSON.stringify(evts));
+  } catch (err) {
+    console.warn('[telemetry] save failed:', err);
+  }
+}
 
-const queryEvents = db.prepare<[string, number], { ts: number; event: string; meta: string | null }>(
-  `SELECT ts, event, meta FROM node_events WHERE node_id = ? AND ts >= ? ORDER BY ts ASC`
-);
-
-const queryAllSince = db.prepare<[number], { node_id: string; ts: number; event: string; meta: string | null }>(
-  `SELECT node_id, ts, event, meta FROM node_events WHERE ts >= ? ORDER BY ts ASC`
-);
+let events = load();
 
 export function recordEvent(nodeId: string, event: string, meta?: Record<string, unknown>): void {
-  try {
-    insertEvent.run(nodeId, event, Date.now(), meta ? JSON.stringify(meta) : null);
-    console.log(`[telemetry] ${nodeId} → ${event}`);
-  } catch (err) {
-    console.warn('[telemetry] write failed:', err);
-  }
+  events.push({ nodeId, ts: Date.now(), event, meta: meta ?? null });
+  if (events.length > MAX_EVENTS) events.splice(0, events.length - MAX_EVENTS);
+  save(events);
+  console.log(`[telemetry] ${nodeId} → ${event}`);
 }
 
 export function getHistory(nodeId: string, windowMs = 300_000) {
   const since = Date.now() - windowMs;
-  const events = queryEvents.all(nodeId, since).map(r => ({
-    ts: r.ts,
-    event: r.event,
-    meta: r.meta ? JSON.parse(r.meta) : null,
-  }));
-  return { nodeId, windowMs, events };
+  return {
+    nodeId,
+    windowMs,
+    events: events
+      .filter(e => e.nodeId === nodeId && e.ts >= since)
+      .map(e => ({ ts: e.ts, event: e.event, meta: e.meta })),
+  };
 }
 
-// Used by homebase pull-sync: all events since a given timestamp across all nodes
 export function getAllSince(sinceTs: number) {
-  return queryAllSince.all(sinceTs).map(r => ({
-    nodeId: r.node_id,
-    ts: r.ts,
-    event: r.event,
-    meta: r.meta ? JSON.parse(r.meta) : null,
-  }));
+  return events
+    .filter(e => e.ts >= sinceTs)
+    .map(e => ({ nodeId: e.nodeId, ts: e.ts, event: e.event, meta: e.meta }));
 }

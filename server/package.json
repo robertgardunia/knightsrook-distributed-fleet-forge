@@ -10,9 +10,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.52.0",
-    "@types/better-sqlite3": "^7.6.13",
     "@types/dockerode": "^4.0.1",
-    "better-sqlite3": "^12.9.0",
     "cors": "^2.8.5",
     "dockerode": "^5.0.0",
     "dotenv": "^16.4.5",
