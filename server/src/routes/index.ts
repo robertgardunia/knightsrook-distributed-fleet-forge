@@ -34,9 +34,11 @@ export function createRouter(registry: FleetRegistry) {
     try {
       const ac = new AbortController();
       const timer = setTimeout(() => ac.abort(), 1500);
-      await fetch('http://127.0.0.1:5025/api/fleet', { signal: ac.signal });
+      // Probe the socket.io polling endpoint — confirms the WS server is up, not just HTTP
+      const r = await fetch('http://127.0.0.1:5025/socket.io/?EIO=4&transport=polling', { signal: ac.signal });
       clearTimeout(timer);
-      res.json({ ready: true });
+      // socket.io returns 200 with a session packet when ready
+      res.json({ ready: r.ok });
     } catch {
       res.json({ ready: false });
     }

@@ -381,7 +381,7 @@ export default function App() {
               )}
               {/* Refresh button — top-right corner of graph panel */}
               <button
-                onClick={requestGraph}
+                onClick={() => { requestGraph(); fgHandle.current?.reheat(); }}
                 title="Refresh fleet"
                 style={{
                   position: 'absolute', top: 8, right: 8, zIndex: 10,

@@ -16,6 +16,7 @@ const ZOOM_LEVEL: Record<string, number> = {
 
 export interface FleetGraphHandle {
   zoomToNode: (id: string) => void;
+  reheat: () => void;
 }
 
 interface Props {
@@ -28,7 +29,7 @@ const FleetGraph = forwardRef<FleetGraphHandle, Props>(function FleetGraph({ gra
   const containerRef = useRef<HTMLDivElement>(null);
   const fgRef = useRef<FGInstance>(null);
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
-  const charge = -30;
+  const charge = -200;
   const manualZoom = useRef(false);
 
   useImperativeHandle(ref, () => ({
@@ -40,6 +41,9 @@ const FleetGraph = forwardRef<FleetGraphHandle, Props>(function FleetGraph({ gra
       manualZoom.current = true;
       fgRef.current?.centerAt(node.x, node.y!, 600);
       fgRef.current?.zoom(ZOOM_LEVEL[node.role] ?? 3, 600);
+    },
+    reheat() {
+      fgRef.current?.d3ReheatSimulation();
     },
   }), [graph.nodes]);
   useEffect(() => {
@@ -63,9 +67,9 @@ const FleetGraph = forwardRef<FleetGraphHandle, Props>(function FleetGraph({ gra
     fgRef.current.d3Force('charge').strength(charge);
     fgRef.current.d3Force('link').distance((link: { source: { id?: string } | string }) => {
       const src = typeof link.source === 'object' ? link.source.id : link.source;
-      return src === 'homebase' ? 80 : 28;
+      return src === 'homebase' ? 140 : 55;
     });
-    fgRef.current.d3Force('collide', forceCollide((node: FleetNode) => Math.sqrt(node.val) * 3 + 6));
+    fgRef.current.d3Force('collide', forceCollide((node: FleetNode) => Math.sqrt(node.val) * 3 + 10));
     fgRef.current.d3ReheatSimulation();
   }, [graph.nodes.length]);
 
