@@ -155,6 +155,13 @@ Each kiosk agent independently simulates activity for the Logs tab: game kiosks 
 
 **Toxiproxy** sits between every station controller and homebase. Four proxies are pre-configured at startup (`config/toxiproxy.json`): `s1-upstream` through `s4-upstream` on ports 21001–21004. Station controllers connect through their proxy instead of directly to homebase. The control API on `:8474` lets the chaos agent add and remove toxics at runtime.
 
-**Chaos agent** (`containers/chaos-agent/`) is a Claude Haiku-powered gremlin that runs as a container in the lab stack. It observes the live fleet via socket.io, then every 30–120 seconds asks Haiku to pick a realistic fault to inject. Haiku chooses from network faults (latency, packet loss, bandwidth throttle via Toxiproxy) or power faults (container stop/restart via Docker API) and logs its reasoning for every action. Requires `ANTHROPIC_API_KEY` in the host environment.
+**Chaos agent** (`containers/chaos-agent/`) is a Claude Haiku-powered gremlin that runs as a container in the lab stack. It observes the live fleet via socket.io and queries Toxiproxy for the current active faults on each station proxy before every cycle, building a per-station situation report: controller status, kiosk alive/alerting/dead counts, active faults, and recent action history per station. Haiku sees four independent stories and advances each one separately.
+
+Three fault categories:
+- **Network** — latency, packet loss, bandwidth throttle via Toxiproxy (station→homebase link only)
+- **Power** — container stop (hard failure, stays down) or restart with delay (self-recovering blip)
+- **Code** — `hang_process`: SIGSTOP/SIGCONT via Docker exec; container stays alive and looks healthy but the agent freezes and stops heartbeating. Simulates GC pause, deadlock, blocking I/O. Universal — can target any container regardless of station.
+
+The chaos agent is itself a container and is not immune to the faults it creates. Requires `ANTHROPIC_API_KEY` in the host environment.
 
 The server falls back to `buildMockFleet()` when no agents are connected (`USE_MOCK=true` forces mock always).

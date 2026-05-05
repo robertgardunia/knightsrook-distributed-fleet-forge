@@ -1,7 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { io } from 'socket.io-client';
-import { addToxic, resetProxy } from './toxiproxy.js';
-import { stopContainer, restartContainer } from './docker.js';
+import { addToxic, resetProxy, listToxics } from './toxiproxy.js';
+import { stopContainer, restartContainer, hangProcess } from './docker.js';
 
 interface FleetNode {
   id: string;
@@ -18,104 +18,232 @@ interface FleetGraph {
   isMock?: boolean;
 }
 
-const client = new Anthropic();
-const FLEET_URL  = process.env.FLEET_URL       ?? 'http://homebase:5020';
-const MIN_MS     = Number(process.env.MIN_INTERVAL_MS ?? 30_000);
-const MAX_MS     = Number(process.env.MAX_INTERVAL_MS ?? 120_000);
-const PROXY_NAMES = ['s1-upstream', 's2-upstream', 's3-upstream', 's4-upstream'] as const;
+interface StationSituation {
+  id: string;
+  proxyName: string;
+  controllerId: string;
+  controllerStatus: string;
+  controllerAlerting: boolean;
+  kiosks: { total: number; alive: number; alerting: number; dead: number };
+  activeFaults: string;
+  history: string[];
+}
+
+const STATIONS = ['s1', 's2', 's3', 's4'] as const;
+const PROXY_NAMES = STATIONS.map(s => `${s}-upstream`) as unknown as readonly string[];
+
+const client    = new Anthropic();
+const FLEET_URL = process.env.FLEET_URL          ?? 'http://homebase:5020';
+const MIN_MS    = Number(process.env.MIN_INTERVAL_MS ?? 30_000);
+const MAX_MS    = Number(process.env.MAX_INTERVAL_MS ?? 120_000);
 
 let fleetGraph: FleetGraph | null = null;
-const recentActions: string[] = [];
 
-const socket = io(FLEET_URL, { reconnectionDelay: 5000 });
-socket.on('fleet:graph', (data: FleetGraph) => { fleetGraph = data; });
-socket.on('disconnect', () => { fleetGraph = null; });
+// Per-station action history — keyed by station ID ("s1", "s2", ...)
+const stationHistory = new Map<string, string[]>();
+
+function stationKey(target: string): string | null {
+  const m = target.match(/^(s\d+)/);
+  return m ? m[1] : null;
+}
+
+function recordAction(target: string, summary: string): void {
+  const key = stationKey(target);
+  if (!key) return;
+  const h = stationHistory.get(key) ?? [];
+  h.push(summary);
+  if (h.length > 5) h.shift();
+  stationHistory.set(key, h);
+}
+
+async function buildSituations(graph: FleetGraph): Promise<StationSituation[]> {
+  return Promise.all(
+    STATIONS.map(async (id) => {
+      const proxyName    = `${id}-upstream`;
+      const controllerId = `${id}-controller`;
+      const controller   = graph.nodes.find(n => n.id === controllerId);
+      const kiosks       = graph.nodes.filter(n => n.parentId === controllerId);
+
+      const alive    = kiosks.filter(n => n.status !== 'dead').length;
+      const alerting = kiosks.filter(n => !!n.alerting).length;
+      const dead     = kiosks.filter(n => n.status === 'dead').length;
+
+      let activeFaults = 'none';
+      try {
+        const toxics = await listToxics(proxyName);
+        if (toxics.length > 0) {
+          activeFaults = toxics.map(t => {
+            const a = t.attributes;
+            if (t.type === 'latency')     return `latency ${a.latency}ms jitter ${a.jitter ?? 0}ms`;
+            if (t.type === 'packet_loss') return `packet_loss ${a.percent}%`;
+            if (t.type === 'bandwidth')   return `bandwidth_cap ${a.rate}KB/s`;
+            return t.type;
+          }).join(', ');
+        }
+      } catch {
+        activeFaults = 'unknown (proxy unreachable)';
+      }
+
+      return {
+        id,
+        proxyName,
+        controllerId,
+        controllerStatus:   controller?.status   ?? 'unknown',
+        controllerAlerting: controller?.alerting ?? false,
+        kiosks: { total: kiosks.length, alive, alerting, dead },
+        activeFaults,
+        history: stationHistory.get(id) ?? [],
+      };
+    })
+  );
+}
+
+function buildPrompt(situations: StationSituation[]): string {
+  const blocks = situations.map(s => {
+    const ctrl    = `controller=${s.controllerStatus}${s.controllerAlerting ? ' ALERTING' : ''}`;
+    const kStatus = s.kiosks.alive === s.kiosks.total
+      ? `kiosks=${s.kiosks.total}/${s.kiosks.total} alive`
+      : `kiosks=${s.kiosks.alive}/${s.kiosks.total} alive` +
+        (s.kiosks.alerting ? `, ${s.kiosks.alerting} alerting` : '') +
+        (s.kiosks.dead     ? `, ${s.kiosks.dead} dead`         : '');
+    const hist = s.history.length > 0 ? s.history.join(' → ') : 'no recent actions';
+
+    return `[${s.id.toUpperCase()} — ${s.proxyName}]  ${ctrl}  ${kStatus}
+  Active faults : ${s.activeFaults}
+  History       : ${hist}`;
+  }).join('\n\n');
+
+  return `You are a chaos engineer stress-testing a distributed kiosk fleet deployed across four physical stations. Each station is a separate venue installation that can fail in its own way for its own reasons. Your job is to create realistic, independent failure narratives — not uniform chaos.
+
+Current situation per station:
+
+${blocks}
+
+Topology:
+- Station controllers reach homebase through their named proxy (s1-upstream … s4-upstream)
+- Each station has 4 game kiosks (sN-game-1…4) and 2 info kiosks (sN-info-1…2) that connect only to their station controller
+- Container names follow the pattern exactly: s1-controller, s2-game-3, s4-info-1, homebase, etc.
+
+Fault categories — each tells a different kind of story:
+  NETWORK  — inject_latency, inject_packet_loss, inject_bandwidth, reset_network
+             Affects the station→homebase link. Kiosks stay up but their controller loses homebase visibility.
+             Stories: congested uplink, damaged cable, WiFi interference, ISP throttling, overloaded switch.
+  POWER    — stop_container (hard failure, stays down), restart_container (self-recovering blip)
+             The node actually dies. Stories: pulled power, UPS failure, breaker trip, watchdog reboot.
+  CODE     — hang_process (container alive, process frozen — the silent failure)
+             Container looks healthy to Docker but the agent stops heartbeating. Stories: GC freeze,
+             deadlock on a connection pool, blocking I/O, runaway thread, memory pressure stall.
+             Code failures are not station-specific — they can hit any node anywhere independently.
+
+Constraints:
+1. Each station has its own independent story. S2 having intermittent packet loss and S3 having a hung kiosk are separate situations with separate causes — don't treat the fleet as a unit.
+2. Let a story develop before starting another. Escalate within a station before touching a new one.
+3. If a station already has active faults or dead/alerting nodes, that story is still unfolding — decide whether to escalate, hold, or let it breathe.
+4. A station with no history is a candidate for a new story beginning — start with something small and specific.
+5. Code failures (hang_process) are universal — they can be layered on top of any station situation or start a new story on a clean station. A hung kiosk on top of a degraded network is a compound failure.
+6. Use observe when you're waiting for a fault to show up in node status before deciding the next move.
+
+Choose exactly ONE action. The reason field should read like a plausible incident report — what specifically is happening in the real world right now.`;
+}
 
 const tools: Anthropic.Tool[] = [
   {
     name: 'inject_latency',
-    description: 'Add latency to a station\'s upstream connection, simulating degraded network (congested switch, lossy cable, overloaded link).',
+    description: 'Add latency to a station upstream connection — the first sign of network degradation (congested switch, long routing path, overloaded uplink, marginal cable).',
     input_schema: {
       type: 'object' as const,
       properties: {
         station:    { type: 'string', enum: [...PROXY_NAMES] },
-        latency_ms: { type: 'number', description: 'Base latency in milliseconds (50–3000)' },
-        jitter_ms:  { type: 'number', description: 'Random jitter added to each packet (0–500)' },
-        reason:     { type: 'string', description: 'Realistic real-world cause for this failure' },
+        latency_ms: { type: 'number', description: 'Base added latency in ms (50–3000)' },
+        jitter_ms:  { type: 'number', description: 'Per-packet random jitter in ms (0–500)' },
+        reason:     { type: 'string', description: 'Specific real-world failure mode' },
       },
       required: ['station', 'latency_ms', 'reason'],
     },
   },
   {
     name: 'inject_packet_loss',
-    description: 'Drop a percentage of packets on a station upstream, simulating poor wireless signal or damaged cable.',
+    description: 'Drop a percentage of packets — simulates wireless interference, damaged cable, or a switch with bad memory.',
     input_schema: {
       type: 'object' as const,
       properties: {
         station: { type: 'string', enum: [...PROXY_NAMES] },
-        percent: { type: 'number', description: 'Packet loss percentage (1–75)' },
-        reason:  { type: 'string', description: 'Realistic real-world cause' },
+        percent: { type: 'number', description: 'Loss percentage (1–75)' },
+        reason:  { type: 'string', description: 'Specific real-world failure mode' },
       },
       required: ['station', 'percent', 'reason'],
     },
   },
   {
     name: 'inject_bandwidth',
-    description: 'Throttle the upstream bandwidth for a station, simulating a saturated or rate-limited link.',
+    description: 'Cap the upstream bandwidth — simulates a saturated ISP link, rate-limited port, or shared connection with heavy competing traffic.',
     input_schema: {
       type: 'object' as const,
       properties: {
         station:   { type: 'string', enum: [...PROXY_NAMES] },
-        rate_kbps: { type: 'number', description: 'Max bandwidth in KB/s (8–2048)' },
-        reason:    { type: 'string', description: 'Realistic real-world cause' },
+        rate_kbps: { type: 'number', description: 'Max throughput in KB/s (8–2048)' },
+        reason:    { type: 'string', description: 'Specific real-world failure mode' },
       },
       required: ['station', 'rate_kbps', 'reason'],
     },
   },
   {
     name: 'reset_network',
-    description: 'Remove all active network faults from a station proxy, restoring full connectivity.',
+    description: 'Remove all network faults from a station proxy — the issue resolved itself (tech fixed the cable, congestion cleared, ISP restored, etc.).',
     input_schema: {
       type: 'object' as const,
       properties: {
         station: { type: 'string', enum: [...PROXY_NAMES] },
-        reason:  { type: 'string' },
+        reason:  { type: 'string', description: 'Why the fault cleared' },
       },
       required: ['station', 'reason'],
     },
   },
   {
     name: 'stop_container',
-    description: 'Hard-stop a container (simulates power failure or process crash). Container stays down until manually restarted.',
+    description: 'Hard-stop a container — simulates power failure, process crash, or pulled cable. Stays down until the recovery agent or an operator intervenes.',
     input_schema: {
       type: 'object' as const,
       properties: {
-        container: { type: 'string', description: 'Exact container name (e.g. s1-controller, s2-game-3, homebase)' },
-        reason:    { type: 'string', description: 'Realistic real-world cause' },
+        container: { type: 'string', description: 'Exact container name' },
+        reason:    { type: 'string', description: 'Specific real-world failure mode' },
       },
       required: ['container', 'reason'],
     },
   },
   {
     name: 'restart_container',
-    description: 'Stop a container and restart it after a delay (simulates UPS cutover, watchdog restart, or brief power blip).',
+    description: 'Stop a container and restart it after a delay — simulates UPS cutover, watchdog-triggered reboot, or brief power blip where the machine self-recovers.',
     input_schema: {
       type: 'object' as const,
       properties: {
         container: { type: 'string', description: 'Exact container name' },
-        down_ms:   { type: 'number', description: 'How long the container stays down in ms (5000–60000)' },
-        reason:    { type: 'string', description: 'Realistic real-world cause' },
+        down_ms:   { type: 'number', description: 'Downtime in ms (5000–60000)' },
+        reason:    { type: 'string', description: 'Specific real-world failure mode' },
       },
       required: ['container', 'down_ms', 'reason'],
     },
   },
   {
-    name: 'observe',
-    description: 'Skip this cycle and observe the current state without injecting any new faults. Use when the fleet is already stressed or when waiting for a previous fault to take effect.',
+    name: 'hang_process',
+    description: 'Pause the main process inside a container via SIGSTOP without stopping the container — simulates a software deadlock, hung I/O wait, infinite loop, or garbage collection freeze. The container appears running and healthy to Docker, but the agent stops heartbeating. Automatically resumes after hang_ms via SIGCONT (the "thaw").',
     input_schema: {
       type: 'object' as const,
       properties: {
-        observation: { type: 'string', description: 'What you observe about the current fleet state and why you\'re waiting' },
+        container: { type: 'string', description: 'Exact container name' },
+        hang_ms:   { type: 'number', description: 'How long the process stays frozen in ms (10000–120000)' },
+        reason:    { type: 'string', description: 'Specific code-level failure mode (e.g. GC pause, deadlock on DB connection pool, blocking I/O)' },
+      },
+      required: ['container', 'hang_ms', 'reason'],
+    },
+  },
+  {
+    name: 'observe',
+    description: 'Hold this cycle without injecting anything — waiting for a recent fault to propagate into node status, or monitoring an unfolding situation before deciding next action.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        observation: { type: 'string', description: 'What you observe and why you are waiting' },
       },
       required: ['observation'],
     },
@@ -123,60 +251,67 @@ const tools: Anthropic.Tool[] = [
 ];
 
 async function executeTool(name: string, input: Record<string, unknown>): Promise<void> {
+  const reason = (input.reason ?? input.observation ?? '') as string;
+
   switch (name) {
     case 'inject_latency': {
       const { station, latency_ms, jitter_ms = 0 } = input as { station: string; latency_ms: number; jitter_ms?: number };
       await addToxic(station, { name: 'latency', type: 'latency', attributes: { latency: latency_ms, jitter: jitter_ms } });
       console.log(`[HAIKU] +latency station=${station} ms=${latency_ms} jitter=${jitter_ms}`);
+      recordAction(station, `latency ${latency_ms}ms (${reason})`);
       break;
     }
     case 'inject_packet_loss': {
       const { station, percent } = input as { station: string; percent: number };
       await addToxic(station, { name: 'packet_loss', type: 'packet_loss', attributes: { percent } });
       console.log(`[HAIKU] +packet_loss station=${station} pct=${percent}`);
+      recordAction(station, `packet_loss ${percent}% (${reason})`);
       break;
     }
     case 'inject_bandwidth': {
       const { station, rate_kbps } = input as { station: string; rate_kbps: number };
       await addToxic(station, { name: 'bandwidth', type: 'bandwidth', attributes: { rate: rate_kbps } });
       console.log(`[HAIKU] +bandwidth station=${station} kbps=${rate_kbps}`);
+      recordAction(station, `bandwidth_cap ${rate_kbps}KB/s (${reason})`);
       break;
     }
     case 'reset_network': {
       const { station } = input as { station: string };
       await resetProxy(station);
       console.log(`[HAIKU] reset_network station=${station}`);
+      recordAction(station, `network restored (${reason})`);
       break;
     }
     case 'stop_container': {
       const { container } = input as { container: string };
       await stopContainer(container);
       console.log(`[HAIKU] stop_container name=${container}`);
+      recordAction(container, `${container} stopped (${reason})`);
       break;
     }
     case 'restart_container': {
       const { container, down_ms } = input as { container: string; down_ms: number };
-      // fire-and-forget — don't block the chaos loop for the full down period
       restartContainer(container, down_ms).catch(err =>
         console.error(`[HAIKU] restart_container failed: ${err}`)
       );
       console.log(`[HAIKU] restart_container name=${container} down=${down_ms}ms`);
+      recordAction(container, `${container} restarted down=${Math.round(down_ms / 1000)}s (${reason})`);
+      break;
+    }
+    case 'hang_process': {
+      const { container, hang_ms } = input as { container: string; hang_ms: number };
+      hangProcess(container, hang_ms);
+      console.log(`[HAIKU] hang_process name=${container} hang=${hang_ms}ms`);
+      recordAction(container, `${container} hung ${Math.round(hang_ms / 1000)}s (${reason})`);
       break;
     }
     case 'observe': {
-      const { observation } = input as { observation: string };
-      console.log(`[HAIKU] observe: ${observation}`);
+      console.log(`[HAIKU] observe: ${reason}`);
       break;
     }
     default:
       console.warn(`[HAIKU] unknown tool: ${name}`);
   }
-}
-
-function buildFleetSummary(graph: FleetGraph): string {
-  return graph.nodes
-    .map(n => `  ${n.id} role=${n.role} status=${n.status}${n.alerting ? ' ALERTING' : ''}`)
-    .join('\n');
 }
 
 async function runChaosStep(): Promise<void> {
@@ -185,33 +320,8 @@ async function runChaosStep(): Promise<void> {
     return;
   }
 
-  const summary     = buildFleetSummary(fleetGraph);
-  const recentStr   = recentActions.slice(-3).join(' | ') || 'none';
-
-  const prompt = `You are a chaos engineer running realistic fault injection tests on a distributed kiosk fleet.
-
-Current fleet state:
-${summary}
-
-Recent actions (last 3): ${recentStr}
-
-Fleet topology:
-- 4 station controllers (s1–s4), each on their own subnet
-- Each station has 4 game kiosks (KG) and 2 info kiosks (KI)
-- Station controllers connect to homebase through proxies s1-upstream through s4-upstream
-- Kiosks connect only to their station controller — no direct homebase access
-
-Network fault tools operate on station→homebase links only.
-Container tools can target any container by exact name (e.g. s2-controller, s3-game-1, s1-info-2, homebase).
-
-Rules:
-1. Faults must be REALISTIC — simulate actual venue/datacenter failure modes (hardware degradation, congestion, power fluctuation, UPS failure, wireless interference, etc.)
-2. Escalate gradually — prefer latency before packet loss before full disconnect; prefer single-station before multi-station
-3. Don't repeat the exact same action on the same target consecutively
-4. If the fleet is already heavily stressed (multiple nodes dead/alerting), prefer observe or reset_network
-5. Provide a specific, plausible real-world reason for every action
-
-Choose exactly ONE action.`;
+  const situations = await buildSituations(fleetGraph);
+  const prompt     = buildPrompt(situations);
 
   const response = await client.messages.create({
     model: 'claude-haiku-4-5-20251001',
@@ -227,8 +337,6 @@ Choose exactly ONE action.`;
       const reason = (input.reason ?? input.observation ?? '') as string;
       console.log(`[HAIKU] reasoning: "${reason}"`);
       await executeTool(block.name, input);
-      recentActions.push(`${block.name}(${JSON.stringify(input)})`);
-      if (recentActions.length > 10) recentActions.shift();
     }
   }
 }
@@ -238,7 +346,7 @@ function rand(min: number, max: number) {
 }
 
 async function chaosLoop(): Promise<void> {
-  await new Promise(r => setTimeout(r, 15_000)); // let fleet settle first
+  await new Promise(r => setTimeout(r, 15_000));
 
   while (true) {
     try {
@@ -253,14 +361,13 @@ async function chaosLoop(): Promise<void> {
 }
 
 let started = false;
+const socket = io(FLEET_URL, { reconnectionDelay: 5000 });
+socket.on('fleet:graph', (data: FleetGraph) => { fleetGraph = data; });
+socket.on('disconnect', () => { fleetGraph = null; });
 socket.on('connect', () => {
   console.log('[HAIKU] connected to fleet at', FLEET_URL);
-  if (!started) {
-    started = true;
-    chaosLoop();
-  }
+  if (!started) { started = true; chaosLoop(); }
 });
-
 socket.on('connect_error', (err) => {
   console.error('[HAIKU] connect error:', err.message);
 });
