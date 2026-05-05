@@ -81,7 +81,14 @@ export function recordEvent(nodeId: string, event: string, meta?: Record<string,
   }
 }
 
-export function getHistory(nodeId: string, windowMs = 300_000) {
+export interface NodeHistory {
+  nodeId:   string;
+  windowMs: number;
+  stats:    Array<{ ts: number; cpu: number; memUsed: number; memTotal: number; netInRate: number; netOutRate: number; uptime: number }>;
+  events:   Array<{ ts: number; event: string; meta: unknown }>;
+}
+
+export function getHistory(nodeId: string, windowMs = 300_000): NodeHistory {
   const since = Date.now() - windowMs;
   const stats = queryStats.all(nodeId, since).map(r => ({
     ts: r.ts,

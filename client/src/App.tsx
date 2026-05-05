@@ -9,6 +9,7 @@ import Sidebar from './components/Sidebar';
 import MonitorPanel from './components/MonitorPanel';
 import StatsPanel from './components/StatsPanel';
 import ScreenPanel from './components/ScreenPanel';
+import FiremanPanel from './components/FiremanPanel';
 import type { FleetGraph as FleetGraphData, FleetNode } from './types/fleet';
 
 const ROLE_LABEL: Record<string, string> = {
@@ -399,6 +400,7 @@ export default function App() {
 
         </div>
       )}
+      <FiremanPanel />
     </div>
   );
 }

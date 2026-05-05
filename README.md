@@ -164,4 +164,10 @@ Three fault categories:
 
 The chaos agent does not target itself (self-targeting reduces chaos output with no narrative value), but it can target the Fireman container — the recovery system going dark while failures are unfolding is a valid story. Requires `ANTHROPIC_API_KEY` in the host environment.
 
+**Fireman** — on-demand incident recovery agents spawned by a dispatcher in the homebase server. When the fleet registry marks a node dead, the dispatcher spawns a Fireman instance for that incident (preventing double-spawning). Each instance: pulls telemetry history and playbook patterns, classifies the fault (network / power / code / endemic), calls Sonnet (or Haiku for well-known patterns) with multi-turn tool use, executes recovery actions (reset network via Toxiproxy, restart container via Docker), and writes the outcome back to the shared playbook. Multiple incidents are handled concurrently — each gets its own instance. Escalations surface to the dashboard as persistent alerts. Authority is scoped: homebase can only fix what Docker and Toxiproxy can reach. Homebase itself makes no decisions — the Fireman does, and the user makes fleet-level calls via the dashboard.
+
+**Playbook** — shared SQLite store (`server/data/playbook.db`) of incident records and extracted patterns. Universal read via `GET /api/playbook/patterns` and `GET /api/playbook/incidents`. Pattern confidence grows with each successful resolution. Firemen use it to select Haiku for high-confidence patterns and Sonnet for novel situations.
+
+**Dashboard Fireman panel** — fixed overlay in the bottom-right corner. Shows active incidents, per-step actions with reasoning, resolutions, and escalations. Escalations are highlighted in red and persist until acknowledged. Hidden when no Fireman activity has occurred.
+
 The server falls back to `buildMockFleet()` when no agents are connected (`USE_MOCK=true` forces mock always).

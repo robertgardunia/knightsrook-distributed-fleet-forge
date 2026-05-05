@@ -26,6 +26,10 @@ services:
       PORT: "5020"
       NODE_ENV: production
       USE_MOCK: "false"
+      TOXIPROXY_URL: "http://chaos-proxy:8474"
+      ANTHROPIC_API_KEY: "${ANTHROPIC_API_KEY}"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
     ports:
       - "5025:5020"
     networks: [fleet-net]

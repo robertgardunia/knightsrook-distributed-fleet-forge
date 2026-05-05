@@ -6,17 +6,26 @@ import { buildMockFleet } from './lib/mockFleet.js';
 import { FleetRegistry } from './lib/fleetRegistry.js';
 import { streamLogs, openShell, type ShellHandle, streamStats, type NodeStats } from './lib/containerStreams.js';
 import { recordStats, recordEvent } from './lib/telemetry.js';
+import { Dispatcher } from './lib/dispatcher.js';
 
 const PORT     = Number(process.env.PORT) || 5020;
 const USE_MOCK = process.env.USE_MOCK === 'true';
 
+// dispatcher is assigned after io is created; the closure captures it at call time
+let dispatcher: Dispatcher;
+
 const registry = new FleetRegistry(
   () => { io.emit('fleet:graph', getGraph()); },
-  recordEvent,
+  (nodeId, event) => {
+    recordEvent(nodeId, event);
+    dispatcher?.handleEvent(nodeId, event);
+  },
 );
 
 const httpServer = createServer(createApp(registry));
 const io = new Server(httpServer, { cors: { origin: '*' } });
+
+dispatcher = new Dispatcher(registry, io);
 
 function getGraph() {
   const isMock = USE_MOCK || registry.size === 0;
