@@ -94,6 +94,19 @@ Force layout uses charge `-30` with per-link distances (homebase→station `80`,
 
 Nodes that miss 1–2 heartbeats (9–15s window) show a pulsing orange ring while still alive — visual warning before going dead. Sidebar node-detail header uses the same uppercase/spaced register as the panel tab headers.
 
+## Testing
+
+```bash
+cd server && npm test        # run tests once
+cd server && npm run test:watch  # watch mode
+```
+
+Server unit tests (Vitest) cover the critical business logic:
+- `FleetRegistry` — register, heartbeat, alerting/dead transitions, recovered events, event firing
+- `telemetry` — recordStats throttle, recordEvent, getHistory window queries
+
+Tests run automatically via pre-commit hook.
+
 ## Quickstart
 
 ```bash
