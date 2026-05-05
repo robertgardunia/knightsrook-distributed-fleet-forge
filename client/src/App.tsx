@@ -465,14 +465,9 @@ export default function App() {
 
           </div>
 
-          {/* Sidebar — hidden when node selected */}
-          <div style={{
-            width: open ? 0 : 280,
-            overflow: 'hidden',
-            flexShrink: 0,
-            transition: 'width 0.35s ease',
-          }}>
-            <Sidebar graph={visibleGraph} selected={selected} onClose={() => setSelected(null)} />
+          {/* Sidebar — always visible */}
+          <div style={{ width: 280, flexShrink: 0 }}>
+            <Sidebar graph={visibleGraph} />
           </div>
 
         </div>
