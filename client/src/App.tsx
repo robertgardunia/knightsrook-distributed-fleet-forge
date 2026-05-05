@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { socket } from './socket';
+import { socket, reconnectTo } from './socket';
+
+// Containerized homebase publishes on :5025 in the chaos lab.
+// Host dev server stays on :5020 (via Vite proxy) for demo/mock mode.
+const LAB_SERVER = 'http://localhost:5025';
 import FleetGraph, { type FleetGraphHandle } from './components/FleetGraph';
 import Sidebar from './components/Sidebar';
 import MonitorPanel from './components/MonitorPanel';
@@ -167,11 +171,15 @@ export default function App() {
     };
   }, [handleGraph, requestGraph]);
 
-  // On mode change: clear graph when going to demo (fresh mock), just re-request for lab
+  // On mode change: reconnect socket to the right server, clear stale graph.
+  // Skips on mount — socket already connected to the dev server via Vite proxy.
+  const mountedRef = useRef(false);
   useEffect(() => {
-    if (labMode === 'demo') setGraph({ nodes: [], links: [] });
-    if (socket.connected) requestGraph();
-  }, [labMode, requestGraph]);
+    if (!mountedRef.current) { mountedRef.current = true; return; }
+    setGraph({ nodes: [], links: [] });
+    reconnectTo(labMode === 'lab' ? LAB_SERVER : window.location.origin);
+    // requestGraph fires via the socket 'connect' event handler above
+  }, [labMode]);
 
   return (
     <div style={{ width: '100%', height: '100dvh', background: '#0f172a', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
