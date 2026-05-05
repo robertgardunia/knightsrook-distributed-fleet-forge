@@ -32,13 +32,13 @@ export default function ActivityPanel() {
       push({ color: '#fca5a5', icon: '⚡', label: 'chaos', text: `${d.tool.replace(/_/g, ' ')} → ${d.target}`, detail: d.reason });
     }
     function onSpawned(d: { nodeId: string; faultType?: string }) {
-      push({ color: '#93c5fd', icon: '🔥', label: 'fireman', text: `spawned → ${d.nodeId}`, detail: d.faultType });
+      push({ color: '#93c5fd', icon: '🔥', label: 'recovery', text: `spawned → ${d.nodeId}`, detail: d.faultType });
     }
     function onResolved(d: { nodeId: string }) {
-      push({ color: '#86efac', icon: '✓', label: 'fireman', text: `${d.nodeId} recovered` });
+      push({ color: '#86efac', icon: '✓', label: 'recovery', text: `${d.nodeId} recovered` });
     }
     function onEscalated(d: { nodeId: string; reason?: string }) {
-      push({ color: '#fbbf24', icon: '⚠', label: 'fireman', text: `escalation: ${d.nodeId}`, detail: (d as {reason?: string}).reason });
+      push({ color: '#fbbf24', icon: '⚠', label: 'recovery', text: `escalation: ${d.nodeId}`, detail: (d as {reason?: string}).reason });
     }
 
     socket.on('chaos:action',      onChaos);

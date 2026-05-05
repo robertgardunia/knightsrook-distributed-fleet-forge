@@ -53,7 +53,7 @@ export default function AnimationController() {
     function onFiremanSpawned(data: { nodeId: string; faultType?: string }) {
       pushAnimation(data.nodeId, { type: 'fireman-pulse', startedAt: Date.now() });
       addToast({
-        text:   `🔥 Fireman → ${data.nodeId}${data.faultType ? ` (${data.faultType})` : ''}`,
+        text:   `🔥 Recovery → ${data.nodeId}${data.faultType ? ` (${data.faultType})` : ''}`,
         color:  '#93c5fd',
         bg:     '#0c1a2e',
         border: '#1e3a5f',
