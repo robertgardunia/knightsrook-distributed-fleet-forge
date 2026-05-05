@@ -201,7 +201,7 @@ const tools: Anthropic.Tool[] = [
   },
   {
     name: 'stop_container',
-    description: 'Hard-stop a container — simulates power failure, process crash, or pulled cable. Stays down until the recovery agent or an operator intervenes. Do NOT target chaos-agent.',
+    description: 'Hard-stop a container — simulates power failure, process crash, or pulled cable. Stays down until the recovery agent or an operator intervenes. Do NOT target chaos-agent or homebase.',
     input_schema: {
       type: 'object' as const,
       properties: {
@@ -213,7 +213,7 @@ const tools: Anthropic.Tool[] = [
   },
   {
     name: 'restart_container',
-    description: 'Stop a container and restart it after a delay — simulates UPS cutover, watchdog-triggered reboot, or brief power blip where the machine self-recovers. Do NOT target chaos-agent.',
+    description: 'Stop a container and restart it after a delay — simulates UPS cutover, watchdog-triggered reboot, or brief power blip where the machine self-recovers. Do NOT target chaos-agent or homebase.',
     input_schema: {
       type: 'object' as const,
       properties: {
@@ -226,7 +226,7 @@ const tools: Anthropic.Tool[] = [
   },
   {
     name: 'hang_process',
-    description: 'Pause the main process inside a container via SIGSTOP without stopping the container — simulates a software deadlock, hung I/O wait, infinite loop, or garbage collection freeze. The container appears running and healthy to Docker, but the agent stops heartbeating. Automatically resumes after hang_ms via SIGCONT (the "thaw"). Do NOT target chaos-agent.',
+    description: 'Pause the main process inside a container via SIGSTOP without stopping the container — simulates a software deadlock, hung I/O wait, infinite loop, or garbage collection freeze. The container appears running and healthy to Docker, but the agent stops heartbeating. Automatically resumes after hang_ms via SIGCONT (the "thaw"). Do NOT target chaos-agent or homebase.',
     input_schema: {
       type: 'object' as const,
       properties: {
@@ -250,7 +250,8 @@ const tools: Anthropic.Tool[] = [
   },
 ];
 
-const SELF_CONTAINERS = new Set(['chaos-agent']);
+// homebase is the fleet socket server — stopping it kills the dashboard connection
+const SELF_CONTAINERS = new Set(['chaos-agent', 'homebase']);
 
 async function executeTool(name: string, input: Record<string, unknown>): Promise<void> {
   const reason = (input.reason ?? input.observation ?? '') as string;
@@ -328,7 +329,7 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
   }
 }
 
-async function runChaosStep(): Promise<void> {
+async function runChaosStep(forced = false): Promise<void> {
   if (!fleetGraph || fleetGraph.isMock || fleetGraph.nodes.length === 0) {
     console.log('[HAIKU] fleet not ready, skipping');
     return;
@@ -336,11 +337,13 @@ async function runChaosStep(): Promise<void> {
 
   const situations = await buildSituations(fleetGraph);
   const prompt     = buildPrompt(situations);
+  // Manual trigger: exclude observe — user clicked the button expecting something to happen
+  const activeTools = forced ? tools.filter(t => t.name !== 'observe') : tools;
 
   const response = await client.messages.create({
     model: 'claude-haiku-4-5-20251001',
     max_tokens: 512,
-    tools,
+    tools: activeTools,
     tool_choice: { type: 'any' },
     messages: [{ role: 'user', content: prompt }],
   });
@@ -383,8 +386,8 @@ socket.on('connect', () => {
   if (!started) { started = true; chaosLoop(); }
 });
 socket.on('chaos:trigger', () => {
-  console.log('[HAIKU] manual trigger received — running step now');
-  runChaosStep().catch(err => console.error('[HAIKU] trigger step error:', err));
+  console.log('[HAIKU] manual trigger received — running step now (forced, no observe)');
+  runChaosStep(true).catch(err => console.error('[HAIKU] trigger step error:', err));
 });
 socket.on('connect_error', (err) => {
   console.error('[HAIKU] connect error:', err.message);
