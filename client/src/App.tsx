@@ -93,7 +93,7 @@ function useIsMobile() {
   return isMobile;
 }
 
-async function callChaos(action: 'start' | 'stop') {
+async function callChaos(action: 'start' | 'stop' | 'trigger') {
   await fetch(`/api/chaos/${action}`, { method: 'POST' });
 }
 
@@ -274,6 +274,25 @@ export default function App() {
               </button>
             ))}
           </div>
+
+          {/* Trigger chaos — only in live lab mode */}
+          {labMode === 'lab' && !isForging && (
+            <button
+              onClick={() => callChaos('trigger')}
+              title="Trigger one chaos cycle now"
+              style={{
+                background: '#1a0a0a', border: '1px solid #7f1d1d',
+                color: '#fca5a5', padding: '4px 11px',
+                fontSize: '0.65rem', cursor: 'pointer', borderRadius: 2,
+                letterSpacing: '0.08em', marginRight: 4,
+                transition: 'all 0.15s ease',
+              }}
+              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#2d0f0f'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = '#1a0a0a'; }}
+            >
+              ⚡ Chaos
+            </button>
+          )}
 
           {/* Nav items */}
           {(['Fleet', 'Alerts', 'Settings'] as const).map(label => (

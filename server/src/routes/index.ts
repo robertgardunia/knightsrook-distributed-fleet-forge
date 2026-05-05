@@ -5,6 +5,10 @@ import type { FleetRegistry } from '../lib/fleetRegistry.js';
 import { getHistory } from '../lib/telemetry.js';
 import { getPatterns, getRecentIncidents } from '../lib/playbook.js';
 
+type EmitFn = (event: string, ...args: unknown[]) => void;
+let _emit: EmitFn = () => {};
+export function setEmit(fn: EmitFn) { _emit = fn; }
+
 // Project root is one level up from the server/ directory.
 const projectRoot = path.resolve(process.cwd(), '..');
 
@@ -46,6 +50,11 @@ export function createRouter(registry: FleetRegistry) {
     } catch (err) {
       res.status(500).json({ success: false, error: String(err) });
     }
+  });
+
+  router.post('/chaos/trigger', (_req, res) => {
+    _emit('chaos:trigger');
+    res.json({ success: true });
   });
 
   router.post('/chaos/stop', (_req, res) => {

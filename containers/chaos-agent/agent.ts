@@ -382,6 +382,10 @@ socket.on('connect', () => {
   console.log('[HAIKU] connected to fleet at', FLEET_URL);
   if (!started) { started = true; chaosLoop(); }
 });
+socket.on('chaos:trigger', () => {
+  console.log('[HAIKU] manual trigger received — running step now');
+  runChaosStep().catch(err => console.error('[HAIKU] trigger step error:', err));
+});
 socket.on('connect_error', (err) => {
   console.error('[HAIKU] connect error:', err.message);
 });
