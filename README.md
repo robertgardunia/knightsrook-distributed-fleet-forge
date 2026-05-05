@@ -70,6 +70,21 @@ Click background or the ✕ button to return to full-screen graph.
 
 The header search box filters all nodes by name/role. Selecting a result zooms and centers the graph to that node identically to clicking it directly.
 
+### Live event overlays
+
+Three fixed overlays provide real-time narrative visibility during Online Lab mode:
+
+| Overlay | Position | Content |
+|---|---|---|
+| **Toast strip** | Top-center | `⚡ chaos action → target` and `✓ recovered` toasts, auto-dismiss after 3.5s |
+| **Fireman panel** | Bottom-right | Incidents grouped by ID: fault type → action steps → outcome. Escalations shown in red with ACK button. |
+| **Playbook panel** | Bottom-left | Accumulated fault patterns with success rate bar (green ≥80%, yellow ≥50%, red below). Refreshes every 10s. Hidden until first incident resolves. |
+
+Node animations on the force graph:
+- **Red shockwave** — two expanding rings when chaos agent targets a node
+- **Blue pulse** — beating ring on a dead node while Fireman is actively working it
+- **Green burst** — three cascading rings on recovery
+
 ## Architecture
 
 Three-tier cascade autonomy: homebase → station-controllers → kiosk swarms. Each node type carries a status (federation / island / swarm / dead) that reflects its connectivity tier. The fleet dashboard visualizes live node state as a force-directed graph.

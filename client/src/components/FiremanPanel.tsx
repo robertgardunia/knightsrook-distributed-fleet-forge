@@ -7,13 +7,20 @@ interface FiremanEvent {
   nodeId:     string;
   type:       'spawned' | 'action' | 'resolved' | 'escalated';
   text:       string;
-  severity?:  string;
   ts:         number;
+}
+
+interface Incident {
+  id:      string;
+  nodeId:  string;
+  events:  FiremanEvent[];
+  outcome?: 'resolved' | 'escalated';
 }
 
 export default function FiremanPanel() {
   const [events,    setEvents]    = useState<FiremanEvent[]>([]);
   const [collapsed, setCollapsed] = useState(false);
+  const [acked,     setAcked]     = useState<Set<string>>(new Set());
 
   useEffect(() => {
     function push(type: FiremanEvent['type'], data: Record<string, unknown>) {
@@ -22,21 +29,22 @@ export default function FiremanPanel() {
         incidentId: data.incidentId as string,
         nodeId:     data.nodeId     as string,
         type,
-        severity:   data.severity  as string | undefined,
-        text:       type === 'spawned'   ? `▶ ${data.nodeId} — ${data.faultType ?? data.event} (${data.model})`
-                  : type === 'action'    ? `  ${data.action}: "${data.reason}"`
-                  : type === 'resolved'  ? `✓ ${data.nodeId} resolved in ${Math.round((data.durationMs as number) / 1000)}s`
-                  : /* escalated */        `⚠ ${data.nodeId}: ${data.summary}`,
+        text: type === 'spawned'
+          ? `${data.faultType ?? data.event ?? '?'} · ${data.model ?? ''}`
+          : type === 'action'
+          ? `${data.action}: "${data.reason}"`
+          : type === 'resolved'
+          ? `resolved in ${Math.round((data.durationMs as number) / 1000)}s`
+          : `${data.summary}`,
         ts: Date.now(),
       };
-      setEvents(prev => [ev, ...prev].slice(0, 50));
+      setEvents(prev => [ev, ...prev].slice(0, 150));
     }
 
-    socket.on('fireman:spawned',   (d) => push('spawned',   d));
-    socket.on('fireman:action',    (d) => push('action',    d));
-    socket.on('fireman:resolved',  (d) => push('resolved',  d));
-    socket.on('fireman:escalated', (d) => push('escalated', d));
-
+    socket.on('fireman:spawned',   d => push('spawned',   d));
+    socket.on('fireman:action',    d => push('action',    d));
+    socket.on('fireman:resolved',  d => push('resolved',  d));
+    socket.on('fireman:escalated', d => push('escalated', d));
     return () => {
       socket.off('fireman:spawned');
       socket.off('fireman:action');
@@ -45,18 +53,33 @@ export default function FiremanPanel() {
     };
   }, []);
 
-  const escalations = events.filter(e => e.type === 'escalated');
-  const hasAlert    = escalations.length > 0;
+  // Group events into incidents (most-recently-seen first)
+  const incidents: Incident[] = [];
+  const seen = new Set<string>();
+  for (const ev of events) {
+    if (seen.has(ev.incidentId)) continue;
+    seen.add(ev.incidentId);
+    const group   = events.filter(e => e.incidentId === ev.incidentId);
+    const outcome = group.find(e => e.type === 'resolved')  ? 'resolved' as const
+                  : group.find(e => e.type === 'escalated') ? 'escalated' as const
+                  : undefined;
+    incidents.push({ id: ev.incidentId, nodeId: ev.nodeId, events: group, outcome });
+  }
 
-  if (events.length === 0) return null;
+  const unacked  = incidents.filter(i => i.outcome === 'escalated' && !acked.has(i.id));
+  const hasAlert = unacked.length > 0;
+
+  if (incidents.length === 0) return null;
 
   return (
     <div style={{
-      position: 'fixed', bottom: 16, right: 16, width: 340, zIndex: 200,
+      position: 'fixed', bottom: 16, right: 16, width: 360, zIndex: 200,
       background: '#0f172a', border: `1px solid ${hasAlert ? '#f87171' : '#1e293b'}`,
       borderRadius: 6, fontFamily: 'monospace', fontSize: '0.72rem',
-      boxShadow: hasAlert ? '0 0 12px rgba(248,113,113,0.3)' : '0 2px 8px rgba(0,0,0,0.4)',
+      boxShadow: hasAlert ? '0 0 14px rgba(248,113,113,0.35)' : '0 2px 8px rgba(0,0,0,0.4)',
     }}>
+
+      {/* Header */}
       <div
         onClick={() => setCollapsed(c => !c)}
         style={{
@@ -67,28 +90,91 @@ export default function FiremanPanel() {
         }}
       >
         <span style={{ fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', fontSize: '0.65rem' }}>
-          Fireman {hasAlert ? `⚠ ${escalations.length} escalation${escalations.length > 1 ? 's' : ''}` : `(${events.length})`}
+          Fireman{hasAlert
+            ? ` ⚠ ${unacked.length} escalation${unacked.length > 1 ? 's' : ''}`
+            : ` (${incidents.length})`}
         </span>
         <span style={{ opacity: 0.5 }}>{collapsed ? '▲' : '▼'}</span>
       </div>
 
+      {/* Incident list */}
       {!collapsed && (
-        <div style={{ maxHeight: 220, overflowY: 'auto', padding: '4px 0' }}>
-          {events.map(ev => (
-            <div key={ev.id} style={{
-              padding: '3px 10px',
-              color: ev.type === 'escalated' ? '#f87171'
-                   : ev.type === 'resolved'  ? '#4ade80'
-                   : ev.type === 'spawned'   ? '#60a5fa'
-                   : '#94a3b8',
-              borderLeft: ev.type === 'escalated' ? '2px solid #f87171'
-                        : ev.type === 'resolved'   ? '2px solid #4ade80'
-                        : '2px solid transparent',
-              whiteSpace: 'pre-wrap', wordBreak: 'break-word',
-            }}>
-              {ev.text}
-            </div>
-          ))}
+        <div style={{ maxHeight: 320, overflowY: 'auto', padding: '6px 8px', display: 'flex', flexDirection: 'column', gap: 5 }}>
+          {incidents.slice(0, 20).map(inc => {
+            const spawned   = inc.events.find(e => e.type === 'spawned');
+            const actions   = inc.events.filter(e => e.type === 'action');
+            const outcome   = inc.events.find(e => e.type === 'resolved' || e.type === 'escalated');
+            const isActive   = !inc.outcome;
+            const isResolved = inc.outcome === 'resolved';
+            const isEscalated = inc.outcome === 'escalated';
+            const isUnacked  = isEscalated && !acked.has(inc.id);
+
+            const accent = isResolved ? '#4ade80' : isEscalated ? '#f87171' : '#60a5fa';
+
+            return (
+              <div key={inc.id} style={{
+                background: '#070f1e',
+                borderRadius: 3,
+                borderLeft: `3px solid ${accent}`,
+                padding: '5px 8px',
+              }}>
+                {/* Incident header row */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 2 }}>
+                  <div style={{ color: '#f1f5f9', fontWeight: 600, fontSize: '0.7rem' }}>
+                    <span style={{ color: accent, marginRight: 5 }}>
+                      {isResolved ? '✓' : isEscalated ? '⚠' : '●'}
+                    </span>
+                    {inc.nodeId}
+                  </div>
+                  {spawned && (
+                    <div style={{ color: '#475569', fontSize: '0.6rem', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {spawned.text}
+                    </div>
+                  )}
+                </div>
+
+                {/* Action lines */}
+                {actions.map((a, i) => (
+                  <div key={i} style={{
+                    color: '#64748b', fontSize: '0.64rem',
+                    paddingLeft: 10, lineHeight: 1.55,
+                    whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+                  }}>
+                    {a.text}
+                  </div>
+                ))}
+
+                {/* Outcome line */}
+                {outcome && (
+                  <div style={{
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                    marginTop: 3, color: accent, fontSize: '0.64rem',
+                  }}>
+                    <span>{outcome.text}</span>
+                    {isUnacked && (
+                      <button
+                        onClick={e => { e.stopPropagation(); setAcked(prev => new Set([...prev, inc.id])); }}
+                        style={{
+                          background: 'transparent', border: '1px solid #f8717166',
+                          color: '#f87171', cursor: 'pointer',
+                          fontSize: '0.58rem', padding: '1px 7px', borderRadius: 2, letterSpacing: '0.06em',
+                        }}
+                      >
+                        ACK
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* In-progress indicator */}
+                {isActive && (
+                  <div style={{ color: '#3b82f6', fontSize: '0.6rem', marginTop: 2, opacity: 0.7 }}>
+                    working…
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

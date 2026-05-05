@@ -2,6 +2,7 @@ import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 're
 import ForceGraph2D from 'react-force-graph-2d';
 import { forceCollide } from 'd3-force-3d';
 import type { FleetGraph, FleetNode } from '../types/fleet';
+import { getAnimations } from '../lib/nodeAnimations';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type FGInstance = any;
@@ -130,11 +131,65 @@ const FleetGraph = forwardRef<FleetGraphHandle, Props>(function FleetGraph({ gra
             return `rgb(${r},${g},${b})`;
           };
 
+          const now  = Date.now();
+          const anims = getAnimations(n.id);
+
+          // Chaos shockwave — two expanding red rings
+          for (const anim of anims.filter(a => a.type === 'chaos-shockwave')) {
+            const p = Math.min(1, (now - anim.startedAt) / (anim.durationMs ?? 1500));
+            const r1 = radius + (p * 48) / globalScale;
+            const a1 = 0.85 * (1 - p);
+            if (a1 > 0) {
+              ctx.beginPath();
+              ctx.arc(n.x, n.y, r1, 0, 2 * Math.PI);
+              ctx.strokeStyle = `rgba(248,113,113,${a1})`;
+              ctx.lineWidth = 2.5 / globalScale;
+              ctx.stroke();
+            }
+            const p2 = Math.max(0, p - 0.18);
+            const r2 = radius + (p2 * 48) / globalScale;
+            const a2 = 0.5 * Math.max(0, 1 - p / 0.85);
+            if (a2 > 0) {
+              ctx.beginPath();
+              ctx.arc(n.x, n.y, r2, 0, 2 * Math.PI);
+              ctx.strokeStyle = `rgba(248,113,113,${a2})`;
+              ctx.lineWidth = 1.5 / globalScale;
+              ctx.stroke();
+            }
+          }
+
+          // Recovery burst — three cascading green rings
+          for (const anim of anims.filter(a => a.type === 'recovery-burst')) {
+            const p = Math.min(1, (now - anim.startedAt) / (anim.durationMs ?? 2000));
+            for (let i = 0; i < 3; i++) {
+              const pi = Math.max(0, p - i * 0.14);
+              const r  = radius + (pi * 56) / globalScale;
+              const a  = 0.8 * (1 - pi);
+              if (a <= 0) continue;
+              ctx.beginPath();
+              ctx.arc(n.x, n.y, r, 0, 2 * Math.PI);
+              ctx.strokeStyle = `rgba(74,222,128,${a})`;
+              ctx.lineWidth = (2.5 - i * 0.6) / globalScale;
+              ctx.stroke();
+            }
+          }
+
+          // Alerting ring (orange pulse)
           if (n.alerting) {
-            const pulse = 0.4 + 0.4 * Math.sin(Date.now() / 350);
+            const pulse = 0.4 + 0.4 * Math.sin(now / 350);
             ctx.beginPath();
             ctx.arc(n.x, n.y, radius + 7 / globalScale, 0, 2 * Math.PI);
             ctx.strokeStyle = `rgba(251,146,60,${pulse})`;
+            ctx.lineWidth = 2.5 / globalScale;
+            ctx.stroke();
+          }
+
+          // Fireman pulse — blue beating ring while recovery is in progress
+          if (anims.some(a => a.type === 'fireman-pulse')) {
+            const pulse = 0.35 + 0.45 * Math.sin(now / 400);
+            ctx.beginPath();
+            ctx.arc(n.x, n.y, radius + 9 / globalScale, 0, 2 * Math.PI);
+            ctx.strokeStyle = `rgba(96,165,250,${pulse})`;
             ctx.lineWidth = 2.5 / globalScale;
             ctx.stroke();
           }

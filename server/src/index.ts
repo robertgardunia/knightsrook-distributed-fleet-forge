@@ -52,6 +52,9 @@ io.on('connection', (socket) => {
   socket.on('agent:register', (data) => registry.register(data));
   socket.on('agent:heartbeat', (data) => registry.heartbeat(data.id));
 
+  // ── Chaos agent visibility — relay to all dashboard clients ────────────────
+  socket.on('chaos:action', (data) => io.emit('chaos:action', data));
+
   // ── Log streaming ──────────────────────────────────────────────────────────
   socket.on('node:logs:subscribe', async ({ nodeId }: { nodeId: string }) => {
     const key = `logs:${nodeId}`;

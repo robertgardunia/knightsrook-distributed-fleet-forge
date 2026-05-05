@@ -261,6 +261,12 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
     return;
   }
 
+  // Broadcast to dashboard clients before executing
+  const target = (input.container ?? input.station ?? '') as string;
+  if (name !== 'observe') {
+    socket.emit('chaos:action', { tool: name, target, reason });
+  }
+
   switch (name) {
     case 'inject_latency': {
       const { station, latency_ms, jitter_ms = 0 } = input as { station: string; latency_ms: number; jitter_ms?: number };
