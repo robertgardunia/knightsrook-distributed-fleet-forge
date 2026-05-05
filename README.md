@@ -162,6 +162,6 @@ Three fault categories:
 - **Power** — container stop (hard failure, stays down) or restart with delay (self-recovering blip)
 - **Code** — `hang_process`: SIGSTOP/SIGCONT via Docker exec; container stays alive and looks healthy but the agent freezes and stops heartbeating. Simulates GC pause, deadlock, blocking I/O. Universal — can target any container regardless of station.
 
-The chaos agent is itself a container and is not immune to the faults it creates. Requires `ANTHROPIC_API_KEY` in the host environment.
+The chaos agent does not target itself (self-targeting reduces chaos output with no narrative value), but it can target the Fireman container — the recovery system going dark while failures are unfolding is a valid story. Requires `ANTHROPIC_API_KEY` in the host environment.
 
 The server falls back to `buildMockFleet()` when no agents are connected (`USE_MOCK=true` forces mock always).

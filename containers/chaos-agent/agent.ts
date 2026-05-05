@@ -201,11 +201,11 @@ const tools: Anthropic.Tool[] = [
   },
   {
     name: 'stop_container',
-    description: 'Hard-stop a container — simulates power failure, process crash, or pulled cable. Stays down until the recovery agent or an operator intervenes.',
+    description: 'Hard-stop a container — simulates power failure, process crash, or pulled cable. Stays down until the recovery agent or an operator intervenes. Do NOT target chaos-agent.',
     input_schema: {
       type: 'object' as const,
       properties: {
-        container: { type: 'string', description: 'Exact container name' },
+        container: { type: 'string', description: 'Exact container name (never chaos-agent)' },
         reason:    { type: 'string', description: 'Specific real-world failure mode' },
       },
       required: ['container', 'reason'],
@@ -213,11 +213,11 @@ const tools: Anthropic.Tool[] = [
   },
   {
     name: 'restart_container',
-    description: 'Stop a container and restart it after a delay — simulates UPS cutover, watchdog-triggered reboot, or brief power blip where the machine self-recovers.',
+    description: 'Stop a container and restart it after a delay — simulates UPS cutover, watchdog-triggered reboot, or brief power blip where the machine self-recovers. Do NOT target chaos-agent.',
     input_schema: {
       type: 'object' as const,
       properties: {
-        container: { type: 'string', description: 'Exact container name' },
+        container: { type: 'string', description: 'Exact container name (never chaos-agent)' },
         down_ms:   { type: 'number', description: 'Downtime in ms (5000–60000)' },
         reason:    { type: 'string', description: 'Specific real-world failure mode' },
       },
@@ -226,11 +226,11 @@ const tools: Anthropic.Tool[] = [
   },
   {
     name: 'hang_process',
-    description: 'Pause the main process inside a container via SIGSTOP without stopping the container — simulates a software deadlock, hung I/O wait, infinite loop, or garbage collection freeze. The container appears running and healthy to Docker, but the agent stops heartbeating. Automatically resumes after hang_ms via SIGCONT (the "thaw").',
+    description: 'Pause the main process inside a container via SIGSTOP without stopping the container — simulates a software deadlock, hung I/O wait, infinite loop, or garbage collection freeze. The container appears running and healthy to Docker, but the agent stops heartbeating. Automatically resumes after hang_ms via SIGCONT (the "thaw"). Do NOT target chaos-agent.',
     input_schema: {
       type: 'object' as const,
       properties: {
-        container: { type: 'string', description: 'Exact container name' },
+        container: { type: 'string', description: 'Exact container name (never chaos-agent)' },
         hang_ms:   { type: 'number', description: 'How long the process stays frozen in ms (10000–120000)' },
         reason:    { type: 'string', description: 'Specific code-level failure mode (e.g. GC pause, deadlock on DB connection pool, blocking I/O)' },
       },
@@ -250,8 +250,16 @@ const tools: Anthropic.Tool[] = [
   },
 ];
 
+const SELF_CONTAINERS = new Set(['chaos-agent']);
+
 async function executeTool(name: string, input: Record<string, unknown>): Promise<void> {
   const reason = (input.reason ?? input.observation ?? '') as string;
+
+  const container = input.container as string | undefined;
+  if (container && SELF_CONTAINERS.has(container)) {
+    console.warn(`[HAIKU] blocked self-targeting: ${name}(${container})`);
+    return;
+  }
 
   switch (name) {
     case 'inject_latency': {
