@@ -282,7 +282,9 @@ export default function App() {
               disabled={chaosFiring}
               onClick={async () => {
                 setChaosFiring(true);
-                await callChaos('trigger');
+                // Must hit the homebase container directly — chaos agent is connected
+                // to homebase:5020 (container), not the host dev server socket.io
+                await fetch(`${LAB_SERVER}/api/chaos/trigger`, { method: 'POST' });
                 setTimeout(() => setChaosFiring(false), 1500);
               }}
               title="Trigger one chaos cycle now"
