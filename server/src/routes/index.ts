@@ -45,6 +45,10 @@ export function createRouter(registry: FleetRegistry) {
     }
   });
 
+  router.get('/fleet', (_req, res) => {
+    res.json(registry.buildGraph());
+  });
+
   router.get('/telemetry/:nodeId', (req, res) => {
     const windowMs = Number(req.query.window) || 300_000;
     res.json(getHistory(req.params.nodeId, windowMs));

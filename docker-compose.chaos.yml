@@ -38,10 +38,10 @@ services:
     environment:
       AGENT_ID: s1-controller
       AGENT_NAME: S1
-      HOMEBASE_URL: http://homebase:5020
+      HOMEBASE_URL: http://chaos-proxy:21001
       RELAY_PORT: "5021"
     networks: [fleet-net, station-s1-net]
-    depends_on: [homebase]
+    depends_on: [homebase, chaos-proxy]
     restart: unless-stopped
 
   s1-game-1:
@@ -109,10 +109,10 @@ services:
     environment:
       AGENT_ID: s2-controller
       AGENT_NAME: S2
-      HOMEBASE_URL: http://homebase:5020
+      HOMEBASE_URL: http://chaos-proxy:21002
       RELAY_PORT: "5021"
     networks: [fleet-net, station-s2-net]
-    depends_on: [homebase]
+    depends_on: [homebase, chaos-proxy]
     restart: unless-stopped
 
   s2-game-1:
@@ -180,10 +180,10 @@ services:
     environment:
       AGENT_ID: s3-controller
       AGENT_NAME: S3
-      HOMEBASE_URL: http://homebase:5020
+      HOMEBASE_URL: http://chaos-proxy:21003
       RELAY_PORT: "5021"
     networks: [fleet-net, station-s3-net]
-    depends_on: [homebase]
+    depends_on: [homebase, chaos-proxy]
     restart: unless-stopped
 
   s3-game-1:
@@ -251,10 +251,10 @@ services:
     environment:
       AGENT_ID: s4-controller
       AGENT_NAME: S4
-      HOMEBASE_URL: http://homebase:5020
+      HOMEBASE_URL: http://chaos-proxy:21004
       RELAY_PORT: "5021"
     networks: [fleet-net, station-s4-net]
-    depends_on: [homebase]
+    depends_on: [homebase, chaos-proxy]
     restart: unless-stopped
 
   s4-game-1:
@@ -318,9 +318,28 @@ services:
   # ── Chaos Proxy (Toxiproxy) ───────────────────────────────────────────────
   chaos-proxy:
     image: ghcr.io/shopify/toxiproxy:2.9.0
+    command: ["-host", "0.0.0.0", "-config", "/etc/toxiproxy/config.json"]
+    volumes:
+      - ./config/toxiproxy.json:/etc/toxiproxy/config.json:ro
     ports:
       - "8474:8474"
     networks: [fleet-net, station-s1-net, station-s2-net, station-s3-net, station-s4-net]
+    restart: unless-stopped
+
+  # ── Chaos Agent (Haiku gremlin) ───────────────────────────────────────────
+  chaos-agent:
+    container_name: chaos-agent
+    build: ./containers/chaos-agent
+    environment:
+      FLEET_URL:         "http://homebase:5020"
+      TOXIPROXY_URL:     "http://chaos-proxy:8474"
+      ANTHROPIC_API_KEY: "${ANTHROPIC_API_KEY}"
+      MIN_INTERVAL_MS:   "30000"
+      MAX_INTERVAL_MS:   "120000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks: [fleet-net]
+    depends_on: [homebase, chaos-proxy]
     restart: unless-stopped
 
 networks:

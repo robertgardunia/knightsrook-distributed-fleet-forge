@@ -32,6 +32,7 @@ Node history is persisted to SQLite at `server/data/telemetry.db` (or `$TELEMETR
 
 | Endpoint | Description |
 |---|---|
+| `GET /api/fleet` | Current fleet graph as `{ nodes[], links[] }` — live registry only (no mock fallback). |
 | `GET /api/telemetry/:nodeId` | Returns `{ nodeId, windowMs, stats[], events[] }` for the node. Optional `?window=<ms>` param (default 5 minutes). |
 
 Each station controller also exposes its own telemetry HTTP server (same port as the relay, `:5021`) for homebase pull-sync:
@@ -112,6 +113,7 @@ Tests run automatically via pre-commit hook.
 
 ```bash
 cp .env.example .env   # minimum: PORT=5020, NODE_ENV=development
+                       # add ANTHROPIC_API_KEY=sk-... for Online Lab (chaos agent)
 
 pnpm install
 pnpm dev
@@ -151,6 +153,8 @@ Game kiosks (`containers/game-kiosk/`) run Chromium (headless, SwiftShader softw
 
 Each kiosk agent independently simulates activity for the Logs tab: game kiosks log `SIGNIN / GAME_START / LAP_COMPLETE / GAME_OVER / SIGNOUT`; info kiosks log `VISITOR_ARRIVE / SLIDE_VIEW / QR_SCAN / VISITOR_DEPART`. Both also emit xAPI-format statements (`verb=launched`, `verb=progressed`, `verb=completed`, `verb=exited`, `verb=experienced`, `verb=interacted`) alongside each event — groundwork for routing xAPI and system telemetry up the chain. All output is streamed to the Logs tab via docker logs. Both use a two-stage Docker build: TypeScript compiles in stage 1, the runtime stage installs production `node_modules` separately so the fleet agent has `socket.io-client` available. Nginx serves kiosk HTML using the `index` directive (not a redirect) to avoid nginx leaking the internal container port (8080) in Location headers when accessed via host-mapped ports.
 
-**Toxiproxy** control API is exposed on `:8474` for the gremlin driver to inject failures between tiers.
+**Toxiproxy** sits between every station controller and homebase. Four proxies are pre-configured at startup (`config/toxiproxy.json`): `s1-upstream` through `s4-upstream` on ports 21001–21004. Station controllers connect through their proxy instead of directly to homebase. The control API on `:8474` lets the chaos agent add and remove toxics at runtime.
+
+**Chaos agent** (`containers/chaos-agent/`) is a Claude Haiku-powered gremlin that runs as a container in the lab stack. It observes the live fleet via socket.io, then every 30–120 seconds asks Haiku to pick a realistic fault to inject. Haiku chooses from network faults (latency, packet loss, bandwidth throttle via Toxiproxy) or power faults (container stop/restart via Docker API) and logs its reasoning for every action. Requires `ANTHROPIC_API_KEY` in the host environment.
 
 The server falls back to `buildMockFleet()` when no agents are connected (`USE_MOCK=true` forces mock always).

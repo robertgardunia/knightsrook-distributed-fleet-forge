@@ -1,0 +1,6 @@
+[
+  { "name": "s1-upstream", "listen": "0.0.0.0:21001", "upstream": "homebase:5020", "enabled": true },
+  { "name": "s2-upstream", "listen": "0.0.0.0:21002", "upstream": "homebase:5020", "enabled": true },
+  { "name": "s3-upstream", "listen": "0.0.0.0:21003", "upstream": "homebase:5020", "enabled": true },
+  { "name": "s4-upstream", "listen": "0.0.0.0:21004", "upstream": "homebase:5020", "enabled": true }
+]
