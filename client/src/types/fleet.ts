@@ -10,7 +10,6 @@ export interface FleetNode {
   color: string;
   location?: string;
   alerting?: boolean;
-  activePlayer?: string;
 }
 
 export interface FleetLink {

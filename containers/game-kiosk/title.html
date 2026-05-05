@@ -6,31 +6,85 @@
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { background: #000514; overflow: hidden; width: 100vw; height: 100vh; }
-    img { width: 100%; height: 100%; object-fit: cover; display: block; }
-    .insert {
+
+    #bg {
+      position: absolute; inset: 0;
+      background: url('css/title.png') center/cover no-repeat;
+      opacity: 0;
+      transition: opacity 1.8s ease;
+    }
+
+    #insert {
       position: absolute;
       bottom: 72px;
       left: 50%;
       transform: translateX(-50%);
-      font-family: 'Arial', sans-serif;
+      font-family: Arial, sans-serif;
       font-size: 1.3rem;
       color: #facc15;
       letter-spacing: 0.35em;
       text-transform: uppercase;
       white-space: nowrap;
+      visibility: hidden;
+    }
+    #insert.show {
+      visibility: visible;
       animation: blink 1.1s step-end infinite;
     }
     @keyframes blink { 50% { opacity: 0; } }
+
+    /* Covers bg during idle — fades out as a person approaches */
+    #idle-cover {
+      position: absolute; inset: 0;
+      background: #000514;
+      opacity: 1;
+      transition: opacity 2s ease;
+      pointer-events: none;
+    }
   </style>
 </head>
 <body>
-  <img src="css/title.png" alt="">
-  <div class="insert">INSERT COIN TO PLAY</div>
+  <div id="bg"></div>
+  <div id="insert">INSERT COIN TO PLAY</div>
+  <div id="idle-cover"></div>
+
   <script>
-    var delay = 8000 + Math.random() * 12000;
-    setTimeout(function () {
-      window.location.href = 'index.html?attract=1';
-    }, delay);
+    var bg     = document.getElementById('bg');
+    var insert = document.getElementById('insert');
+    var cover  = document.getElementById('idle-cover');
+
+    function rand(min, max) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    // ── Idle — kiosk waiting, screen dark ───────────────────────────────────
+    function idle() {
+      bg.style.opacity = '0';
+      insert.classList.remove('show');
+      cover.style.opacity = '1';
+
+      setTimeout(approach, rand(8000, 28000));
+    }
+
+    // ── Approach — person walking up, bg fades in softly ────────────────────
+    function approach() {
+      cover.style.opacity = '0';
+      bg.style.opacity = '0.3';
+
+      setTimeout(attract, rand(1500, 4500));
+    }
+
+    // ── Attract — standing at kiosk, INSERT COIN blinking ───────────────────
+    function attract() {
+      bg.style.opacity = '0.92';
+      insert.classList.add('show');
+
+      setTimeout(function () {
+        window.location.href = 'index.html?attract=1';
+      }, rand(4000, 13000));
+    }
+
+    idle();
   </script>
 </body>
 </html>

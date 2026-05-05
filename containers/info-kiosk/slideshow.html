@@ -6,18 +6,55 @@
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { background: #000814; overflow: hidden; width: 100vw; height: 100vh; }
+
     #slide {
-      width: 100%;
-      height: 100%;
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
       object-fit: cover;
       display: block;
-      transition: opacity 0.6s ease;
     }
-    #slide.fade { opacity: 0; }
+
+    /* Crossfade layer — shown on top while new slide loads */
+    #slide-next {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
+      object-fit: cover;
+      display: block;
+      opacity: 0;
+      transition: opacity 0.7s ease;
+    }
+
+    /* Idle overlay — dims the screen between visitors */
+    #idle-cover {
+      position: absolute; inset: 0;
+      background: #000814;
+      opacity: 0;
+      transition: opacity 2.5s ease;
+      pointer-events: none;
+    }
+
+    /* Dots */
+    #dots {
+      position: absolute; bottom: 10px; right: 12px;
+      display: flex; gap: 5px;
+      opacity: 1;
+      transition: opacity 1s ease;
+    }
+    .dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: #1e293b;
+      transition: background 0.4s ease;
+    }
+    .dot.active { background: #4ade80; }
   </style>
 </head>
 <body>
-  <img id="slide" alt="">
+  <img id="slide"      src="" alt="">
+  <img id="slide-next" src="" alt="">
+  <div id="idle-cover"></div>
+  <div id="dots"></div>
+
   <script>
     var SLIDES = [
       '/slides/info-build-racer.png',
@@ -26,29 +63,97 @@
       '/slides/info-scan-qr.png'
     ];
 
-    var img     = document.getElementById('slide');
-    var current = Math.floor(Math.random() * SLIDES.length);
+    var slide     = document.getElementById('slide');
+    var slideNext = document.getElementById('slide-next');
+    var cover     = document.getElementById('idle-cover');
+    var dotsEl    = document.getElementById('dots');
 
-    function showSlide(idx) {
-      img.classList.add('fade');
-      setTimeout(function () {
-        img.src = SLIDES[idx];
-        img.classList.remove('fade');
-      }, 600);
+    function rand(min, max) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
     }
 
-    function scheduleNext() {
-      var delay = 8000 + Math.random() * 12000; // 8–20 s
-      setTimeout(function () {
-        current = (current + 1) % SLIDES.length;
-        showSlide(current);
-        scheduleNext();
-      }, delay);
+    // Build dot indicators
+    SLIDES.forEach(function (_, i) {
+      var d = document.createElement('div');
+      d.className = 'dot';
+      d.id = 'dot-' + i;
+      dotsEl.appendChild(d);
+    });
+
+    function setActiveDot(idx) {
+      SLIDES.forEach(function (_, i) {
+        var d = document.getElementById('dot-' + i);
+        if (d) d.className = 'dot' + (i === idx ? ' active' : '');
+      });
     }
 
-    // Boot
-    img.src = SLIDES[current];
-    scheduleNext();
+    // ── Crossfade to a new slide ─────────────────────────────────────────────
+    var currentIdx = 0;
+
+    function crossfadeTo(idx, callback) {
+      slideNext.src = SLIDES[idx];
+      slideNext.onload = function () {
+        slideNext.style.opacity = '1';
+        setTimeout(function () {
+          slide.src = SLIDES[idx];
+          slideNext.style.opacity = '0';
+          currentIdx = idx;
+          setActiveDot(idx);
+          if (callback) callback();
+        }, 700);
+      };
+      // If image is cached, onload may not fire — force it
+      if (slideNext.complete) slideNext.onload();
+    }
+
+    // ── Idle — screen dims between visitors ─────────────────────────────────
+    function idle() {
+      cover.style.opacity = '0.9';
+      dotsEl.style.opacity = '0';
+
+      setTimeout(startVisit, rand(8000, 22000));
+    }
+
+    // ── Visit — visitor at kiosk, slides advance at human pace ──────────────
+    function startVisit() {
+      var startIdx  = Math.floor(Math.random() * SLIDES.length);
+      var totalSlides = rand(3, 6);
+      var shown = 0;
+      var slideTimer = null;
+
+      // Wake screen
+      cover.style.opacity = '0';
+      dotsEl.style.opacity = '1';
+
+      function showNext() {
+        shown++;
+        if (shown > totalSlides) {
+          endVisit();
+          return;
+        }
+        var nextIdx = (startIdx + shown - 1) % SLIDES.length;
+        crossfadeTo(nextIdx, function () {
+          // Variable dwell — some slides get a long read, some a glance
+          var dwell = rand(9000, 24000);
+          slideTimer = setTimeout(showNext, dwell);
+        });
+      }
+
+      // First slide immediately on wakeup
+      crossfadeTo(startIdx, function () {
+        var dwell = rand(9000, 24000);
+        slideTimer = setTimeout(showNext, dwell);
+      });
+
+      function endVisit() {
+        if (slideTimer) clearTimeout(slideTimer);
+        idle();
+      }
+    }
+
+    // Boot — start on a random slide then go idle immediately
+    slide.src = SLIDES[Math.floor(Math.random() * SLIDES.length)];
+    idle();
   </script>
 </body>
 </html>

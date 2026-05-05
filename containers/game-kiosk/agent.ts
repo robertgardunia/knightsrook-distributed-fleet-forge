@@ -31,10 +31,6 @@ setInterval(() => {
   if (socket.connected) socket.emit('agent:heartbeat', { id: AGENT_ID });
 }, HEARTBEAT_MS);
 
-function emitEvent(type: string, extra: Record<string, string> = {}) {
-  if (socket.connected) socket.emit('kiosk:event', { id: AGENT_ID, type, ...extra });
-}
-
 // ── Player simulation ────────────────────────────────────────────────────────
 
 const PLAYERS = [
@@ -61,7 +57,7 @@ function clearTimers() {
 function signOut(reason: 'quit' | 'timeout' | 'displaced') {
   if (!currentPlayer) return;
   console.log(`[${AGENT_ID}] SIGNOUT player=${currentPlayer} session=${currentSession} games=${gamesThisSession} reason=${reason}`);
-  emitEvent('SIGNOUT');
+  console.log(`[${AGENT_ID}] xAPI verb=exited actor=${currentPlayer} object=hexgl/cityscape session=${currentSession} games=${gamesThisSession} reason=${reason}`);
   currentPlayer = null;
   currentSession = null;
   gamesThisSession = 0;
@@ -72,6 +68,7 @@ function signOut(reason: 'quit' | 'timeout' | 'displaced') {
 function endGame(totalScore: number) {
   if (!currentPlayer) return;
   console.log(`[${AGENT_ID}] GAME_OVER player=${currentPlayer} session=${currentSession} score=${totalScore}`);
+  console.log(`[${AGENT_ID}] xAPI verb=completed actor=${currentPlayer} object=hexgl/cityscape score=${totalScore} session=${currentSession}`);
   gamesThisSession++;
   // 45% chance of another round, otherwise idle a bit then leave
   if (Math.random() < 0.45) {
@@ -85,6 +82,7 @@ function startGame() {
   if (!currentPlayer) return;
   const lapCount = rand(1, 3);
   console.log(`[${AGENT_ID}] GAME_START player=${currentPlayer} session=${currentSession} laps=${lapCount}`);
+  console.log(`[${AGENT_ID}] xAPI verb=launched actor=${currentPlayer} object=hexgl/cityscape laps=${lapCount} session=${currentSession}`);
 
   let lap = 0;
   let totalScore = 0;
@@ -99,6 +97,7 @@ function startGame() {
     nextEventTimeout = setTimeout(() => {
       if (!currentPlayer) return;
       console.log(`[${AGENT_ID}] LAP_COMPLETE player=${currentPlayer} lap=${lap}/${lapCount} time=${lapSecs}s score=${score}`);
+      console.log(`[${AGENT_ID}] xAPI verb=progressed actor=${currentPlayer} object=hexgl/cityscape lap=${lap}/${lapCount} time=${lapSecs}s score=${score}`);
       if (lap < lapCount) {
         nextLap();
       } else {
@@ -120,7 +119,7 @@ function signIn(name: string) {
   currentPlayer  = name;
   gamesThisSession = 0;
   console.log(`[${AGENT_ID}] SIGNIN player=${currentPlayer} session=${currentSession}`);
-  emitEvent('SIGNIN', { player: currentPlayer });
+  console.log(`[${AGENT_ID}] xAPI verb=initialized actor=${currentPlayer} object=hexgl/cityscape session=${currentSession}`);
   nextEventTimeout = setTimeout(() => startGame(), rand(2_000, 6_000));
 }
 

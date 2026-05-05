@@ -10,7 +10,6 @@ Distributed Fleet Forge: A containerized chaos lab where sovereign-tier kiosk fl
 | `fleet:request` | client → server | Request/re-request fleet data. Pass `{ mock: true }` to force mock fleet regardless of live agents. |
 | `agent:register` | agent → server | Agent announces itself (`id`, `name`, `role`, `parentId`) |
 | `agent:heartbeat` | agent → server | Keepalive every 5s — node enters `alerting` state at 9s silence, goes `dead` at 15s |
-| `kiosk:event` | agent → server | Kiosk state change (`SIGNIN`/`SIGNOUT`, `VISITOR_ARRIVE`/`VISITOR_DEPART`) — updates `activePlayer` on the fleet graph node in real-time regardless of log subscribers |
 | `node:logs:subscribe` | client → server | Start streaming `docker logs -f` for a node |
 | `node:logs:unsubscribe` | client → server | Stop log stream |
 | `node:logs:line` | server → client | Single log line with timestamp |
@@ -115,7 +114,9 @@ docker compose -f docker-compose.chaos.yml up --build
 
 Each station-controller runs a relay (`containers/station-controller/`) that connects upstream to homebase and listens downstream for kiosk registrations — the cascade autonomy seam.
 
-Game kiosks (`containers/game-kiosk/`) serve HexGL on port 8080 in attract mode: title screen with "INSERT COIN" blink → pre-recorded replay drives the ship around the track → loops. Info kiosks (`containers/info-kiosk/`) serve a slideshow of simulator guide slides on port 8080 with random 8–20s intervals between slides. Each kiosk agent simulates player activity: game kiosks emit `SIGNIN / GAME_START / LAP_COMPLETE / GAME_OVER / SIGNOUT` events; info kiosks emit `VISITOR_ARRIVE / SLIDE_VIEW / QR_SCAN / VISITOR_DEPART` — all streamed to the Logs tab via docker logs. Both use a two-stage Docker build: TypeScript compiles in stage 1, the runtime stage installs production `node_modules` separately so the fleet agent has `socket.io-client` available. Nginx serves kiosk HTML using the `index` directive (not a redirect) to avoid nginx leaking the internal container port (8080) in Location headers when accessed via host-mapped ports.
+Game kiosks (`containers/game-kiosk/`) serve HexGL on port 8080: title screen with "INSERT COIN" blink → idle/approach/attract cycle → pre-recorded replay drives the ship. Info kiosks (`containers/info-kiosk/`) serve a slideshow of simulator guide slides with idle dimming between visitors. Both HTML demos run entirely as browser-side JavaScript — the kiosk has no knowledge of being observed and fires no events to the server; the dashboard iframe is view-only.
+
+Each kiosk agent independently simulates activity for the Logs tab: game kiosks log `SIGNIN / GAME_START / LAP_COMPLETE / GAME_OVER / SIGNOUT`; info kiosks log `VISITOR_ARRIVE / SLIDE_VIEW / QR_SCAN / VISITOR_DEPART`. Both also emit xAPI-format statements (`verb=launched`, `verb=progressed`, `verb=completed`, `verb=exited`, `verb=experienced`, `verb=interacted`) alongside each event — groundwork for routing xAPI and system telemetry up the chain. All output is streamed to the Logs tab via docker logs. Both use a two-stage Docker build: TypeScript compiles in stage 1, the runtime stage installs production `node_modules` separately so the fleet agent has `socket.io-client` available. Nginx serves kiosk HTML using the `index` directive (not a redirect) to avoid nginx leaking the internal container port (8080) in Location headers when accessed via host-mapped ports.
 
 **Toxiproxy** control API is exposed on `:8474` for the gremlin driver to inject failures between tiers.
 

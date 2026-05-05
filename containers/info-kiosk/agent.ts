@@ -31,10 +31,6 @@ setInterval(() => {
   if (socket.connected) socket.emit('agent:heartbeat', { id: AGENT_ID });
 }, HEARTBEAT_MS);
 
-function emitEvent(type: string, extra: Record<string, string> = {}) {
-  if (socket.connected) socket.emit('kiosk:event', { id: AGENT_ID, type, ...extra });
-}
-
 // ── Visitor simulation ───────────────────────────────────────────────────────
 
 const SLIDES = ['info-build-racer.png', 'info-controls.png', 'info-cornering.png', 'info-scan-qr.png'];
@@ -51,7 +47,7 @@ function depart(dwellSecs: number) {
   if (slideTimer)  { clearTimeout(slideTimer);  slideTimer  = null; }
   if (departTimer) { clearTimeout(departTimer); departTimer = null; }
   console.log(`[${AGENT_ID}] VISITOR_DEPART dwell=${dwellSecs}s`);
-  emitEvent('VISITOR_DEPART');
+  console.log(`[${AGENT_ID}] xAPI verb=exited actor=visitor object=info-kiosk/slideshow dwell=${dwellSecs}s`);
   setTimeout(scheduleNextVisitor, rand(8_000, 40_000));
 }
 
@@ -59,11 +55,12 @@ function startVisit() {
   visiting = true;
   const dwellMs = rand(20_000, 90_000);
   console.log(`[${AGENT_ID}] VISITOR_ARRIVE`);
-  emitEvent('VISITOR_ARRIVE');
+  console.log(`[${AGENT_ID}] xAPI verb=launched actor=visitor object=info-kiosk/slideshow`);
 
   // Log initial slide
   let slideIdx = Math.floor(Math.random() * SLIDES.length);
   console.log(`[${AGENT_ID}] SLIDE_VIEW slide=${SLIDES[slideIdx]}`);
+  console.log(`[${AGENT_ID}] xAPI verb=experienced actor=visitor object=info-kiosk/${SLIDES[slideIdx]}`);
 
   // Schedule subsequent slide views during the dwell
   const scheduleSlide = (remainingMs: number) => {
@@ -73,6 +70,7 @@ function startVisit() {
       if (!visiting) return;
       slideIdx = (slideIdx + 1) % SLIDES.length;
       console.log(`[${AGENT_ID}] SLIDE_VIEW slide=${SLIDES[slideIdx]}`);
+      console.log(`[${AGENT_ID}] xAPI verb=experienced actor=visitor object=info-kiosk/${SLIDES[slideIdx]}`);
       scheduleSlide(remainingMs - delay);
     }, delay);
   };
@@ -82,7 +80,10 @@ function startVisit() {
   if (Math.random() < 0.25) {
     const qrDelay = Math.floor(dwellMs * (0.6 + Math.random() * 0.3));
     setTimeout(() => {
-      if (visiting) console.log(`[${AGENT_ID}] QR_SCAN`);
+      if (visiting) {
+        console.log(`[${AGENT_ID}] QR_SCAN`);
+        console.log(`[${AGENT_ID}] xAPI verb=interacted actor=visitor object=info-kiosk/qr-code`);
+      }
     }, qrDelay);
   }
 

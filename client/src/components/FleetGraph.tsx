@@ -130,14 +130,6 @@ const FleetGraph = forwardRef<FleetGraphHandle, Props>(function FleetGraph({ gra
             return `rgb(${r},${g},${b})`;
           };
 
-          if (n.activePlayer) {
-            ctx.beginPath();
-            ctx.arc(n.x, n.y, radius + 3.5 / globalScale, 0, 2 * Math.PI);
-            ctx.strokeStyle = isDimmed ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.45)';
-            ctx.lineWidth = 1 / globalScale;
-            ctx.stroke();
-          }
-
           if (n.alerting) {
             const pulse = 0.4 + 0.4 * Math.sin(Date.now() / 350);
             ctx.beginPath();

@@ -41,15 +41,6 @@ io.on('connection', (socket) => {
   socket.on('agent:register', (data) => registry.register(data));
   socket.on('agent:heartbeat', (data) => registry.heartbeat(data.id));
 
-  // ── Kiosk state events (emitted by kiosk agents regardless of log subscribers)
-  socket.on('kiosk:event', ({ id, type, player }: { id: string; type: string; player?: string }) => {
-    if (type === 'SIGNIN' || type === 'VISITOR_ARRIVE') {
-      registry.setActivePlayer(id, player ?? 'visitor');
-    } else if (type === 'SIGNOUT' || type === 'VISITOR_DEPART') {
-      registry.setActivePlayer(id, undefined);
-    }
-  });
-
   // ── Log streaming ──────────────────────────────────────────────────────────
   socket.on('node:logs:subscribe', async ({ nodeId }: { nodeId: string }) => {
     const key = `logs:${nodeId}`;
