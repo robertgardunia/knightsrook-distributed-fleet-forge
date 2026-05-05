@@ -9,9 +9,8 @@ import Sidebar from './components/Sidebar';
 import MonitorPanel from './components/MonitorPanel';
 import StatsPanel from './components/StatsPanel';
 import ScreenPanel from './components/ScreenPanel';
-import FiremanPanel from './components/FiremanPanel';
 import AnimationController from './components/AnimationController';
-import PlaybookPanel from './components/PlaybookPanel';
+import ActivityPanel from './components/ActivityPanel';
 import type { FleetGraph as FleetGraphData, FleetNode } from './types/fleet';
 
 const ROLE_LABEL: Record<string, string> = {
@@ -347,6 +346,8 @@ export default function App() {
         /* ── Desktop: absolute 2×2 grid ── */
         <div style={{ flex: 1, minHeight: 0, display: 'flex', overflow: 'hidden' }}>
 
+          <ActivityPanel />
+
           <div ref={gridRef} style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
 
             {/* Upper-left: Monitor */}
@@ -465,16 +466,12 @@ export default function App() {
 
           </div>
 
-          {/* Sidebar — always visible */}
-          <div style={{ width: 280, flexShrink: 0 }}>
-            <Sidebar graph={visibleGraph} />
-          </div>
+          {/* Sidebar — fleet status + playbook */}
+          <Sidebar graph={visibleGraph} labConnected={labConnected} apiBase={LAB_SERVER} />
 
         </div>
       )}
       <AnimationController />
-      <FiremanPanel />
-      {labConnected && !isForging && <PlaybookPanel apiBase={LAB_SERVER} />}
     </div>
   );
 }

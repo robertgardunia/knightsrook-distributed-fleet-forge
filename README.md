@@ -59,7 +59,7 @@ Station telemetry records kiosk events only (register / alerting / dead / recove
 
 ## Dashboard
 
-The right sidebar shows fleet status (federation/island/swarm/dead counts, station + kiosk totals) and a live activity log — chaos actions, fireman spawns, and recovery events stream in as they happen with timestamps and color coding.
+The left sidebar is a live activity log — chaos actions (red), fireman spawns (blue), recoveries (green), and escalations (yellow) stream in with timestamps and agent labels. The right sidebar shows fleet status counts and the accumulated playbook of resolved incident patterns (success rate, count, avg duration).
 
 Click any node in the fleet graph to open a resizable 2×2 panel layout. Drag the center vertical or horizontal divider to resize quadrants.
 
