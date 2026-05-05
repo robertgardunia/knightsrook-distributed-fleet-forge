@@ -154,7 +154,7 @@ function DemoLogsView({ node }: { node: FleetNode }) {
         <select value={filterLevel} onChange={e => setLevel(e.target.value as LogLevel | 'all')}
           style={{ background: '#061322', border: '1px solid #1e293b', color: '#475569', padding: '3px 6px', fontSize: '0.65rem', borderRadius: 2, outline: 'none' }}>
           <option value="all">all</option>
-          {(['info','warn','error','debug'] as LogLevel[]).map(l => <option key={l} value={l}>{l}</option>)}
+          {LEVELS.map(l => <option key={l} value={l}>{l}</option>)}
         </select>
         <button onClick={() => setLines([])}
           style={{ background: 'transparent', border: '1px solid #1e293b', color: '#475569', padding: '2px 8px', fontSize: '0.62rem', borderRadius: 2, cursor: 'pointer' }}>

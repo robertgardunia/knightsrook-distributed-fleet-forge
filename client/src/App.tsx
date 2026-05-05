@@ -11,8 +11,6 @@ import StatsPanel from './components/StatsPanel';
 import ScreenPanel from './components/ScreenPanel';
 import type { FleetGraph as FleetGraphData, FleetNode } from './types/fleet';
 
-
-
 const ROLE_LABEL: Record<string, string> = {
   'homebase': 'Home Base',
   'station-controller': 'Station Controller',
