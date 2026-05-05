@@ -99,12 +99,27 @@ const FleetGraph = forwardRef<FleetGraphHandle, Props>(function FleetGraph({ gra
           const n = node as unknown as FleetNode;
           return `${n.name} · ${n.role} · ${n.status}`;
         }}
-        linkColor={() => '#ffffff22'}
+        linkColor={(link) => {
+          const t = graph.nodes.find(n => n.id === ((link.target as FleetNode & {id:string}).id ?? link.target));
+          if (t?.status === 'dead')    return '#f8717133';
+          if (t?.alerting)             return '#fb923c33';
+          return '#ffffff22';
+        }}
         linkCurvature={0.15}
         linkDirectionalParticles={2}
-        linkDirectionalParticleSpeed={0.0015}
+        linkDirectionalParticleSpeed={(link) => {
+          const t = graph.nodes.find(n => n.id === ((link.target as FleetNode & {id:string}).id ?? link.target));
+          if (t?.status === 'dead')    return 0.0002;
+          if (t?.alerting)             return 0.0006;
+          return 0.0015;
+        }}
         linkDirectionalParticleWidth={1.5}
-        linkDirectionalParticleColor={() => '#4ade8055'}
+        linkDirectionalParticleColor={(link) => {
+          const t = graph.nodes.find(n => n.id === ((link.target as FleetNode & {id:string}).id ?? link.target));
+          if (t?.status === 'dead')    return '#f87171aa';
+          if (t?.alerting)             return '#fb923caa';
+          return '#4ade8055';
+        }}
         backgroundColor="#0f172a"
         onNodeClick={(node) => {
           const n = node as unknown as FleetNode & { x: number; y: number };

@@ -84,7 +84,7 @@ Three fixed overlays provide real-time narrative visibility during Online Lab mo
 | **Fireman panel** | Bottom-right | Incidents grouped by ID: fault type → action steps → outcome. Escalations shown in red with ACK button. |
 | **Playbook panel** | Bottom-left | Accumulated fault patterns with success rate bar (green ≥80%, yellow ≥50%, red below). Refreshes every 10s. Hidden until first incident resolves. |
 
-Node animations on the force graph:
+Links degrade visually with their target node: alerting → orange slow particles, dead → red crawling particles. Node animations on the force graph:
 - **Red shockwave** — two expanding rings when chaos agent targets a node
 - **Blue pulse** — beating ring on a dead node while Fireman is actively working it
 - **Green burst** — three cascading rings on recovery

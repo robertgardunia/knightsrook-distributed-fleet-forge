@@ -31,8 +31,9 @@ export async function restartContainer(name: string, delayMs: number): Promise<v
 }
 
 export function hangProcess(name: string, hangMs: number): void {
-  execSignal(name, '-STOP')
+  const c = docker.getContainer(name);
+  c.pause()
     .then(() => new Promise(r => setTimeout(r, hangMs)))
-    .then(() => execSignal(name, '-CONT'))
+    .then(() => c.unpause())
     .catch(err => console.error(`[HAIKU] hang ${name} failed: ${err}`));
 }
