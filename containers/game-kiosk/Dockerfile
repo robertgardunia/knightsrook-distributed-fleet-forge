@@ -4,9 +4,17 @@ WORKDIR /build
 COPY package.json tsconfig.json agent.ts ./
 RUN npm install && npm run build
 
-# Stage 2 — runtime: nginx + Node agent + HexGL
+# Stage 2 — runtime: nginx + Chromium (runs the game) + Node agent + HexGL
 FROM node:20-alpine
-RUN apk add --no-cache nginx git
+RUN apk add --no-cache \
+    nginx \
+    git \
+    chromium \
+    nss \
+    freetype \
+    harfbuzz \
+    ca-certificates \
+    ttf-freefont
 
 # Clone HexGL (depth 1 keeps the image lean)
 RUN git clone --depth 1 https://github.com/BKcore/HexGL.git /tmp/hexgl \

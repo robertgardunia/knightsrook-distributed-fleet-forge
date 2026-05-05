@@ -79,16 +79,33 @@ function kioskPort(nodeId: string): number | null {
   return 18000 + station * 100 + (isInfo ? 50 : 0) + num;
 }
 
-function LiveKioskScreen({ node }: { node: FleetNode }) {
+function LiveKioskScreen({ node, muted, onToggleMute }: { node: FleetNode; muted: boolean; onToggleMute: () => void }) {
   const port = kioskPort(node.id);
   if (!port) return null;
+  const src = `http://localhost:${port}/${muted ? '?muted=1' : ''}`;
   return (
-    <iframe
-      src={`http://localhost:${port}`}
-      style={{ flex: 1, border: 'none', width: '100%', height: '100%', display: 'block', background: '#000' }}
-      title={node.id}
-      allow="autoplay"
-    />
+    <div style={{ flex: 1, position: 'relative', overflow: 'hidden', minHeight: 0 }}>
+      <iframe
+        key={muted ? 'muted' : 'live'}
+        src={src}
+        style={{ border: 'none', width: '100%', height: '100%', display: 'block', background: '#000' }}
+        title={node.id}
+        allow="autoplay"
+      />
+      <button
+        onClick={onToggleMute}
+        style={{
+          position: 'absolute', bottom: 8, right: 8,
+          background: 'rgba(2,12,27,0.8)', border: `1px solid ${muted ? '#334155' : '#4ade80'}`,
+          color: muted ? '#475569' : '#4ade80',
+          borderRadius: 3, padding: '3px 9px',
+          fontSize: '0.6rem', letterSpacing: '0.12em',
+          textTransform: 'uppercase', cursor: 'pointer',
+        }}
+      >
+        {muted ? 'muted' : 'audio on'}
+      </button>
+    </div>
   );
 }
 
@@ -196,9 +213,9 @@ function LiveScreen({ node, live }: { node: FleetNode; live: NodeStats }) {
   );
 }
 
-function ScreenView({ node, isMock }: { node: FleetNode; isMock?: boolean }) {
-  if (node.role === 'game-kiosk') return isMock ? <GameScreen node={node} /> : <LiveKioskScreen node={node} />;
-  if (node.role === 'info-kiosk') return isMock ? <InfoScreen node={node} /> : <LiveKioskScreen node={node} />;
+function ScreenView({ node, isMock, muted, onToggleMute }: { node: FleetNode; isMock?: boolean; muted: boolean; onToggleMute: () => void }) {
+  if (node.role === 'game-kiosk') return isMock ? <GameScreen node={node} /> : <LiveKioskScreen node={node} muted={muted} onToggleMute={onToggleMute} />;
+  if (node.role === 'info-kiosk') return isMock ? <InfoScreen node={node} /> : <LiveKioskScreen node={node} muted={muted} onToggleMute={onToggleMute} />;
   return <NoGuiScreen />;
 }
 
@@ -207,6 +224,7 @@ type Tab = 'stats' | 'screen';
 export default function StatsPanel({ node, isMock }: { node: FleetNode; isMock?: boolean }) {
   const [tab, setTab] = useState<Tab>('stats');
   const [liveStats, setLiveStats] = useState<NodeStats | undefined>();
+  const [muted, setMuted] = useState(true);
 
   useEffect(() => {
     setLiveStats(undefined);
@@ -253,7 +271,7 @@ export default function StatsPanel({ node, isMock }: { node: FleetNode; isMock?:
 
       <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
         {tab === 'stats'  && <StatsView  node={node} live={liveStats} />}
-        {tab === 'screen' && <ScreenView node={node} isMock={isMock} />}
+        {tab === 'screen' && <ScreenView node={node} isMock={isMock} muted={muted} onToggleMute={() => setMuted(m => !m)} />}
       </div>
     </div>
   );

@@ -6,6 +6,17 @@
   function rand(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
   function el(id) { return document.getElementById(id); }
 
+  // Mute all audio when dashboard requests it
+  var _isMuted = new URLSearchParams(window.location.search).get('muted') === '1';
+  if (_isMuted) {
+    var _OrigAC = window.AudioContext || window.webkitAudioContext;
+    if (_OrigAC) {
+      var _SilentAC = function() { var ctx = new _OrigAC(); ctx.suspend(); return ctx; };
+      _SilentAC.prototype = _OrigAC.prototype;
+      window.AudioContext = window.webkitAudioContext = _SilentAC;
+    }
+  }
+
   function showGame() {
     ['step-1', 'step-2', 'step-3', 'step-5'].forEach(function (id) {
       var e = el(id);
@@ -16,7 +27,10 @@
   }
 
   function backToTitle() {
-    window.location.href = 'title.html';
+    var params = new URLSearchParams(window.location.search);
+    params.delete('attract');
+    var qs = params.toString();
+    window.location.href = 'title.html' + (qs ? '?' + qs : '');
   }
 
   function launch() {

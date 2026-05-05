@@ -5,9 +5,16 @@ COPY containers/fleet-agent/package.json containers/fleet-agent/tsconfig.json ./
 COPY containers/info-kiosk/agent.ts ./agent.ts
 RUN npm install && npm run build
 
-# Stage 2 — runtime: nginx + Node agent + slideshow
+# Stage 2 — runtime: nginx + Chromium (runs the slideshow) + Node agent
 FROM node:20-alpine
-RUN apk add --no-cache nginx
+RUN apk add --no-cache \
+    nginx \
+    chromium \
+    nss \
+    freetype \
+    harfbuzz \
+    ca-certificates \
+    ttf-freefont
 
 # Slideshow page
 RUN mkdir -p /usr/share/nginx/html/slides

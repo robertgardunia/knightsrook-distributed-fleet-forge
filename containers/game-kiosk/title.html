@@ -80,11 +80,15 @@
       insert.classList.add('show');
 
       setTimeout(function () {
-        window.location.href = 'index.html?attract=1';
+        // Carry any existing params (e.g. muted=1) through to the game page
+        var params = new URLSearchParams(window.location.search);
+        params.set('attract', '1');
+        window.location.href = 'index.html?' + params.toString();
       }, rand(4000, 13000));
     }
 
-    idle();
+    // Boot into approach immediately — no dark idle on first load
+    approach();
   </script>
 </body>
 </html>

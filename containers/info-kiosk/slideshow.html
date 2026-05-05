@@ -151,9 +151,8 @@
       }
     }
 
-    // Boot — start on a random slide then go idle immediately
-    slide.src = SLIDES[Math.floor(Math.random() * SLIDES.length)];
-    idle();
+    // Boot directly into a visit — no dark idle on first load
+    startVisit();
   </script>
 </body>
 </html>
