@@ -33,6 +33,15 @@ Node history is persisted to SQLite at `server/data/telemetry.db` (or `$TELEMETR
 |---|---|
 | `GET /api/telemetry/:nodeId` | Returns `{ nodeId, windowMs, stats[], events[] }` for the node. Optional `?window=<ms>` param (default 5 minutes). |
 
+Each station controller also exposes its own telemetry HTTP server (same port as the relay, `:5021`) for homebase pull-sync:
+
+| Endpoint | Description |
+|---|---|
+| `GET /telemetry/:nodeId[?window=<ms>]` | Events for a specific kiosk. |
+| `GET /telemetry?since=<ts>` | All kiosk events since a Unix ms timestamp — used by homebase gap sync on reconnect. |
+
+Station telemetry records kiosk events only (register / alerting / dead / recovered). Stats remain the King's spy channel via Docker API. Network address (IP on station subnet) is captured from the socket connection and included in registration gossip upstream.
+
 ## Branding
 
 `client/public/logo.png` — 512×512 transparent-background logo mark (AI-generated, Flux 1 Dev). Also used as `favicon.ico`.
