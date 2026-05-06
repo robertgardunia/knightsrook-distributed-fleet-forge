@@ -37,8 +37,9 @@ export default function ActivityPanel() {
     function onResolved(d: { nodeId: string }) {
       push({ color: '#86efac', icon: '✓', label: 'recovery', text: `${d.nodeId} recovered` });
     }
-    function onEscalated(d: { nodeId: string; reason?: string }) {
-      push({ color: '#fbbf24', icon: '⚠', label: 'recovery', text: `escalation: ${d.nodeId}`, detail: (d as {reason?: string}).reason });
+    function onEscalated(d: { nodeId: string; summary?: string; severity?: string }) {
+      const sev = d.severity ? ` [${d.severity}]` : '';
+      push({ color: '#fbbf24', icon: '⚠', label: 'recovery', text: `escalation${sev}: ${d.nodeId}`, detail: d.summary });
     }
 
     socket.on('chaos:action',      onChaos);

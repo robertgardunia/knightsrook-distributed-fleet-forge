@@ -128,6 +128,8 @@ Server unit tests (Vitest) cover the critical business logic:
 
 Tests run automatically via pre-commit hook.
 
+The homebase server installs `unhandledRejection` and `uncaughtException` handlers on startup so async failures surface in container logs rather than silently crashing the process.
+
 ## Quickstart
 
 ```bash

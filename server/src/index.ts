@@ -135,6 +135,14 @@ io.on('connection', (socket) => {
   });
 });
 
+process.on('unhandledRejection', (reason) => {
+  console.error('[HOMEBASE] unhandledRejection:', reason);
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('[HOMEBASE] uncaughtException:', err);
+});
+
 httpServer.listen(PORT, () => {
   console.log(`Server running on port ${PORT} — mode: ${USE_MOCK ? 'mock' : 'live (mock fallback when empty)'}`);
 });
