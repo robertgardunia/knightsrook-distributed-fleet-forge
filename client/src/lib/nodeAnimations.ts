@@ -9,7 +9,13 @@ export interface NodeAnimation {
 const store = new Map<string, NodeAnimation[]>();
 
 export function getAnimations(nodeId: string): NodeAnimation[] {
-  return store.get(nodeId) ?? [];
+  const arr = store.get(nodeId);
+  if (!arr) return [];
+  // Prune expired timed entries on every read
+  const now  = Date.now();
+  const live = arr.filter(a => a.durationMs == null || (now - a.startedAt) < a.durationMs);
+  if (live.length !== arr.length) store.set(nodeId, live);
+  return live;
 }
 
 export function pushAnimation(nodeId: string, anim: NodeAnimation): void {
@@ -25,6 +31,10 @@ export function clearType(nodeId: string, type: AnimationType): void {
   const arr = store.get(nodeId);
   if (!arr) return;
   store.set(nodeId, arr.filter(a => a.type !== type));
+}
+
+export function clearAll(): void {
+  store.clear();
 }
 
 export function hasActiveAnimations(): boolean {

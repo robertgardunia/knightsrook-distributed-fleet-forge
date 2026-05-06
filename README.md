@@ -85,7 +85,8 @@ Three fixed overlays provide real-time narrative visibility during Online Lab mo
 | **Playbook panel** | Bottom-left | Accumulated fault patterns with success rate bar (green ≥80%, yellow ≥50%, red below). Refreshes every 10s. Hidden until first incident resolves. |
 
 Links degrade visually with their target node: alerting → orange slow particles, dead → red crawling particles. Node animations on the force graph:
-- **Red shockwave** — two rings expanding outward from the node when chaos agent targets it (driven by a continuous rAF loop so rings animate even when the D3 simulation is settled)
+- **Red shockwave** — two rings expanding outward from the node when chaos agent targets it
+- Animation store clears on every `fleet:graph` event (reconnect / mode switch) so rings from crashed or restarted lab sessions never persist
 - **Blue pulse** — beating ring on a dead node while Fireman is actively working it
 - **Green burst** — three cascading rings on recovery
 

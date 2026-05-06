@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { socket } from '../socket';
-import { pushAnimation, clearType } from '../lib/nodeAnimations';
+import { pushAnimation, clearType, clearAll } from '../lib/nodeAnimations';
 
 interface Toast {
   id:    string;
@@ -34,6 +34,13 @@ export default function AnimationController() {
     setToasts(prev => [...prev, { ...t, id }].slice(-6));
     setTimeout(() => setToasts(prev => prev.filter(x => x.id !== id)), 3500);
   }
+
+  useEffect(() => {
+    // Clear all stale animations when the fleet graph is received fresh (reconnect/mode switch)
+    function onFleetGraph() { clearAll(); }
+    socket.on('fleet:graph', onFleetGraph);
+    return () => { socket.off('fleet:graph', onFleetGraph); };
+  }, []);
 
   useEffect(() => {
     function onChaosAction(data: { tool: string; target: string; reason: string }) {
