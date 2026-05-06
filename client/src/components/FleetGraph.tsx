@@ -81,11 +81,13 @@ const FleetGraph = forwardRef<FleetGraphHandle, Props>(function FleetGraph({ gra
     }
   }, [selectedNodeId]);
 
-  // Drive canvas repaints while node animations are running
+  // Keep the force-graph render loop alive while node animations are active.
+  // refresh() only triggers one repaint; resumeAnimation() restarts the internal
+  // rAF loop so nodeCanvasObject fires every frame with a fresh Date.now().
   useEffect(() => {
     let rafId: number;
     function tick() {
-      if (hasActiveAnimations()) fgRef.current?.refresh();
+      if (hasActiveAnimations()) fgRef.current?.resumeAnimation();
       rafId = requestAnimationFrame(tick);
     }
     rafId = requestAnimationFrame(tick);
