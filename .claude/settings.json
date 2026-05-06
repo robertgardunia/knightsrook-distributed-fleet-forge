@@ -28,7 +28,20 @@
       "PowerShell(Copy-Item \"C:\\\\Users\\\\skyth\\\\AppData\\\\Local\\\\Temp\\\\favicon.ico\" \"d:\\\\workspace-knightsrook\\\\knightsrook-distributed-fleet-forge\\\\client\\\\public\\\\favicon.ico\")",
       "Bash(pnpm --filter client add d3-force-3d)",
       "Bash(echo \"server exit: $?\")",
-      "Bash(echo \"client exit: $?\")"
+      "Bash(echo \"client exit: $?\")",
+      "Bash(Get-ChildItem -Path \"d:\\\\workspace-knightsrook\\\\knightsrook-distributed-fleet-forge\\\\containers\\\\\" -Directory | Select-Object -ExpandProperty Name)",
+      "WebFetch(domain:hexgl.bkcore.com)",
+      "PowerShell(pnpm --filter client exec tsc --noEmit 2>&1)",
+      "Bash(xargs -I {} sh -c 'gh search code \"demo\\\\|autoplay\\\\|bot\\\\|ai\" repo:BKcore/HexGL 2>/dev/null || true')",
+      "Bash(xargs -I {} curl -s {})",
+      "Bash(docker info *)",
+      "Bash(node_modules/.bin/tsc --noEmit)",
+      "Bash(cat vite.config.ts)",
+      "Bash(cat client/vite.config.ts)",
+      "Bash(tasklist /FI \"PID eq 55456\" /FO LIST)",
+      "Bash(ps -p 55456 -o comm=)",
+      "PowerShell(Get-Process -Id 55456 -ErrorAction SilentlyContinue)",
+      "PowerShell(Get-NetTCPConnection -LocalPort 5020 -State Listen | Select-Object -First 1 | ForEach-Object { Get-Process -Id $_.OwningProcess -ErrorAction SilentlyContinue | Select-Object Name, Id, Path })"
     ]
   }
 }
