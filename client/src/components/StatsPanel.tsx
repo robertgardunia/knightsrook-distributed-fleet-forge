@@ -82,7 +82,8 @@ function kioskPort(nodeId: string): number | null {
 function LiveKioskScreen({ node, muted, onToggleMute }: { node: FleetNode; muted: boolean; onToggleMute: () => void }) {
   const port = kioskPort(node.id);
   if (!port) return null;
-  const src = `http://localhost:${port}/${muted ? '?muted=1' : ''}`;
+  const muteParam = muted ? '&muted=1' : '';
+  const src = `http://localhost:${port}/index.html?attract=1${muteParam}`;
   return (
     <div style={{ flex: 1, position: 'relative', overflow: 'hidden', minHeight: 0 }}>
       <iframe
