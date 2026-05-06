@@ -50,7 +50,9 @@ export function createRouter(registry: FleetRegistry) {
   router.post('/chaos/start', (_req, res) => {
     try {
       registry.clear();
-      runCompose(['up', '--build', '-d']);
+      // --force-recreate guarantees a fresh container restart even if the
+      // previous docker compose down didn't complete before mode switch.
+      runCompose(['up', '--build', '--force-recreate', '-d']);
       res.json({ success: true });
     } catch (err) {
       res.status(500).json({ success: false, error: String(err) });

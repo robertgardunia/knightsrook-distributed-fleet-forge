@@ -146,7 +146,7 @@ The header has a two-mode segmented toggle:
 | Mode | Behavior |
 |---|---|
 | **Offline Demo** | Default. Mock fleet via host dev server (port 5020, Vite proxy). No containers needed. Switching to it calls `POST /api/chaos/stop`, clears registry, reconnects socket to Vite proxy. |
-| **Online Lab** | Calls `POST /api/chaos/start` → `docker compose -f docker-compose.chaos.yml up --build -d`. All fleet servers are real containers — homebase publishes fleet socket on port **5025**, dashboard reconnects directly to `localhost:5025`. Station controllers connect to `homebase:5020` inside Docker; Toxiproxy can inject failures on `fleet-net`. Graph clears on switch; "Forging Network" overlay shows until agents register. Activity panel and Playbook appear. |
+| **Online Lab** | Calls `POST /api/chaos/start` → `docker compose -f docker-compose.chaos.yml up --build --force-recreate -d`. `--force-recreate` guarantees fresh containers every time — old ones are stopped and rebuilt even if a previous demo→lab→demo cycle left them running. All fleet servers are real containers — homebase publishes fleet socket on port **5025**, dashboard reconnects directly to `localhost:5025`. Station controllers connect to `homebase:5020` inside Docker; Toxiproxy can inject failures on `fleet-net`. Graph clears on switch; "Forging Network" overlay shows until agents register. Activity panel and Playbook appear. |
 
 Three reset controls appear in the header while in Online Lab mode:
 
@@ -202,4 +202,4 @@ The chaos agent does not target itself or homebase (homebase is the fleet socket
 
 **Dashboard Fireman panel** — fixed overlay in the bottom-right corner. Shows active incidents, per-step actions with reasoning, resolutions, and escalations. Escalations are highlighted in red and persist until acknowledged. Hidden when no Fireman activity has occurred.
 
-The server falls back to `buildMockFleet()` when no agents are connected (`USE_MOCK=true` forces mock always).
+The server falls back to `buildMockFleet()` when no agents are connected (`USE_MOCK=true` forces mock always). The mock fleet has 5 stations with intentionally varied kiosk counts per station (Main Hall: 5 game + 2 info; East Pavilion: 4 game + 3 info; West Wing: 3 game + 1 info; North Atrium: 6 game + 1 info; South Concourse: 4 game + 2 info) — 35 nodes total, all at different venues.

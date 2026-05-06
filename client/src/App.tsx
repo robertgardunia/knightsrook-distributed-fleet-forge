@@ -192,6 +192,9 @@ export default function App() {
   const mountedRef = useRef(false);
   useEffect(() => {
     if (!mountedRef.current) { mountedRef.current = true; return; }
+    // Wipe everything immediately — selected node, graph, socket.
+    // This is the single source of truth for mode-switch clearing.
+    setSelected(null);
     setGraph({ nodes: [], links: [] });
 
     if (labMode !== 'lab') {
