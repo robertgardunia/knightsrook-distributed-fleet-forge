@@ -33,7 +33,7 @@ Node history is held in-memory (no external database). Stats are sampled every 5
 | Endpoint | Description |
 |---|---|
 | `GET /api/fleet` | Current fleet graph as `{ nodes[], links[] }` — live registry only (no mock fallback). |
-| `GET /api/chaos/ready` | Returns `{ ready: true }` once the lab homebase container is answering on `:5025`. Polled by the dashboard before connecting the fleet socket — prevents `ERR_CONNECTION_REFUSED` spam during container startup. |
+| `GET /api/chaos/ready` | Returns `{ ready: true }` once the lab homebase container is answering on `:5025`. The dashboard's `waitForLab()` polls this — but first waits for the probe to go DOWN (confirming `--force-recreate` killed old containers) before waiting for it to come back UP. This prevents connecting to stale containers. |
 | `POST /api/chaos/trigger` | Fires one chaos cycle immediately — emits `chaos:trigger` to the chaos agent which runs `runChaosStep()` without waiting for the next scheduled interval. Exposed as an `⚡ Chaos` button in the dashboard header (visible in Online Lab mode only). |
 | `GET /api/telemetry/:nodeId` | Returns `{ nodeId, windowMs, stats[], events[] }` for the node. Optional `?window=<ms>` param (default 5 minutes). |
 
@@ -86,7 +86,8 @@ Three fixed overlays provide real-time narrative visibility during Online Lab mo
 
 Links degrade visually with their target node: alerting → orange slow particles, dead → red crawling particles. Node animations on the force graph:
 - **Red shockwave** — two rings expanding outward from the node when chaos agent targets it
-- Animation store clears only when the `isMock` flag changes (Online Lab ↔ Offline Demo switch) — normal heartbeat/status `fleet:graph` events do not clear animations
+- Animation store clears immediately on every mode switch (via `clearAll()` in the `labMode` effect), and also on `isMock` changes as a secondary safety net
+- Screen view defaults to muted on every node selection; per-node mute toggle available in Online Lab kiosk screen
 - **Blue pulse** — beating ring on a dead node while Fireman is actively working it
 - **Green burst** — three cascading rings on recovery
 

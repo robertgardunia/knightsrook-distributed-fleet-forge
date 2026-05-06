@@ -227,6 +227,10 @@ export default function StatsPanel({ node, isMock }: { node: FleetNode; isMock?:
   const [muted, setMuted] = useState(true);
 
   useEffect(() => {
+    setMuted(true);
+  }, [node.id]);
+
+  useEffect(() => {
     setLiveStats(undefined);
     if (isMock !== false) return;
     socket.emit('node:stats:subscribe', { nodeId: node.id });

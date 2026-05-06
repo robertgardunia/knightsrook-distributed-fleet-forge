@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { socket, reconnectTo } from './socket';
+import { clearAll as clearAllAnimations } from './lib/nodeAnimations';
 
 // Containerized homebase publishes on :5025 in the chaos lab.
 // Host dev server stays on :5020 (via Vite proxy) for demo/mock mode.
@@ -192,10 +193,9 @@ export default function App() {
   const mountedRef = useRef(false);
   useEffect(() => {
     if (!mountedRef.current) { mountedRef.current = true; return; }
-    // Wipe everything immediately — selected node, graph, socket.
-    // This is the single source of truth for mode-switch clearing.
     setSelected(null);
     setGraph({ nodes: [], links: [] });
+    clearAllAnimations();
 
     if (labMode !== 'lab') {
       reconnectTo(window.location.origin);
@@ -204,12 +204,32 @@ export default function App() {
 
     let cancelled = false;
     async function waitForLab() {
+      // If homebase is already up (leftover from a previous session), wait for it to
+      // go DOWN first — --force-recreate kills existing containers before starting
+      // new ones, so connecting immediately would land on stale state.
+      let wasUp = false;
+      try {
+        const r = await fetch('/api/chaos/ready');
+        wasUp = ((await r.json()) as { ready: boolean }).ready;
+      } catch { /* ignore */ }
+
+      if (wasUp && !cancelled) {
+        for (let i = 0; i < 15 && !cancelled; i++) {
+          await new Promise(res => setTimeout(res, 1000));
+          try {
+            const r = await fetch('/api/chaos/ready');
+            const { ready } = (await r.json()) as { ready: boolean };
+            if (!ready) break;
+          } catch { break; }
+        }
+      }
+
       while (!cancelled) {
         try {
           const r = await fetch('/api/chaos/ready');
-          const { ready } = await r.json() as { ready: boolean };
+          const { ready } = (await r.json()) as { ready: boolean };
           if (ready && !cancelled) { reconnectTo(LAB_SERVER); return; }
-        } catch { /* proxy unreachable — shouldn't happen */ }
+        } catch { /* proxy unreachable */ }
         await new Promise(res => setTimeout(res, 2000));
       }
     }
