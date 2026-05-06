@@ -6,7 +6,16 @@ export interface NodeAnimation {
   durationMs?: number; // undefined = persistent until explicitly cleared
 }
 
-const store = new Map<string, NodeAnimation[]>();
+const store       = new Map<string, NodeAnimation[]>();
+const stressStore = new Map<string, number>();
+
+export function getNodeStress(nodeId: string): number {
+  return stressStore.get(nodeId) ?? 0;
+}
+
+export function setNodeStress(nodeId: string, level: number): void {
+  stressStore.set(nodeId, level);
+}
 
 export function getAnimations(nodeId: string): NodeAnimation[] {
   const arr = store.get(nodeId);
@@ -35,6 +44,7 @@ export function clearType(nodeId: string, type: AnimationType): void {
 
 export function clearAll(): void {
   store.clear();
+  stressStore.clear();
 }
 
 export function hasActiveAnimations(): boolean {

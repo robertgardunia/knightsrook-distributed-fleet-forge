@@ -84,7 +84,7 @@ Three fixed overlays provide real-time narrative visibility during Online Lab mo
 | **Fireman panel** | Bottom-right | Incidents grouped by ID: fault type → action steps → outcome. Escalations shown in red with ACK button. |
 | **Playbook panel** | Bottom-left | Accumulated fault patterns with success rate bar (green ≥80%, yellow ≥50%, red below). Refreshes every 10s. Hidden until first incident resolves. |
 
-Links degrade visually with their target node: alerting → orange slow particles, dead → red crawling particles. Node animations on the force graph:
+Links degrade visually with their target node: alerting → orange slow particles, dead → red crawling particles. Repeated incidents accumulate stress on a node's links: first repeat → amber particles (0.0008 speed), second repeat → orange-red particles (0.0004 speed), persisting even while the node is recovered — the graph shows which nodes have had a rough session. Stress clears on mode switch. Node animations on the force graph:
 - **Red shockwave** — two rings expanding outward from the node when chaos agent targets it
 - Animation store clears immediately on every mode switch (via `clearAll()` in the `labMode` effect), and also on `isMock` changes as a secondary safety net
 - Screen view defaults to muted on every node selection; per-node mute toggle available in Online Lab kiosk screen

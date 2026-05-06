@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { socket } from '../socket';
-import { pushAnimation, clearType, clearAll } from '../lib/nodeAnimations';
+import { pushAnimation, clearType, clearAll, setNodeStress } from '../lib/nodeAnimations';
 
 interface Toast {
   id:    string;
@@ -67,6 +67,7 @@ export default function AnimationController() {
     function onFiremanSpawned(data: { nodeId: string; faultType?: string; priorCount?: number }) {
       pushAnimation(data.nodeId, { type: 'fireman-pulse', startedAt: Date.now() });
       const priorCount = data.priorCount ?? 0;
+      setNodeStress(data.nodeId, priorCount);
       const incidentTag = priorCount > 0 ? ` · #${priorCount + 1}` : '';
       addToast({
         text:   `🔥 Recovery → ${data.nodeId}${data.faultType ? ` (${data.faultType}${incidentTag})` : ''}`,

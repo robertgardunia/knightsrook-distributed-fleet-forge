@@ -2,7 +2,7 @@ import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 're
 import ForceGraph2D from 'react-force-graph-2d';
 import { forceCollide } from 'd3-force-3d';
 import type { FleetGraph, FleetNode } from '../types/fleet';
-import { getAnimations } from '../lib/nodeAnimations';
+import { getAnimations, getNodeStress } from '../lib/nodeAnimations';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type FGInstance = any;
@@ -101,6 +101,9 @@ const FleetGraph = forwardRef<FleetGraphHandle, Props>(function FleetGraph({ gra
           const t = graph.nodes.find(n => n.id === ((link.target as FleetNode & {id:string}).id ?? link.target));
           if (t?.status === 'dead')    return '#f8717133';
           if (t?.alerting)             return '#fb923c33';
+          const stress = t ? getNodeStress(t.id) : 0;
+          if (stress >= 2)             return '#f9731633';
+          if (stress === 1)            return '#fcd34d22';
           return '#ffffff22';
         }}
         linkCurvature={0.15}
@@ -109,6 +112,9 @@ const FleetGraph = forwardRef<FleetGraphHandle, Props>(function FleetGraph({ gra
           const t = graph.nodes.find(n => n.id === ((link.target as FleetNode & {id:string}).id ?? link.target));
           if (t?.status === 'dead')    return 0.0002;
           if (t?.alerting)             return 0.0006;
+          const stress = t ? getNodeStress(t.id) : 0;
+          if (stress >= 2)             return 0.0004;
+          if (stress === 1)            return 0.0008;
           return 0.0015;
         }}
         linkDirectionalParticleWidth={1.5}
@@ -116,6 +122,9 @@ const FleetGraph = forwardRef<FleetGraphHandle, Props>(function FleetGraph({ gra
           const t = graph.nodes.find(n => n.id === ((link.target as FleetNode & {id:string}).id ?? link.target));
           if (t?.status === 'dead')    return '#f87171aa';
           if (t?.alerting)             return '#fb923caa';
+          const stress = t ? getNodeStress(t.id) : 0;
+          if (stress >= 2)             return '#f97316aa';
+          if (stress === 1)            return '#fcd34daa';
           return '#4ade8055';
         }}
         backgroundColor="#0f172a"
