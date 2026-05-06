@@ -120,6 +120,21 @@ export function clearPlaybook(): void {
   console.log('[playbook] cleared');
 }
 
+export function getNodeIncidentSummary(nodeId: string, windowMs = 3_600_000): {
+  count: number;
+  recent: Array<{ outcome: string | null; faultType: string | null; ts: number; durationMs: number | null; actions: IncidentAction[] }>;
+} {
+  const cutoff = Date.now() - windowMs;
+  const recent = store.incidents
+    .filter(i => i.nodeId === nodeId && i.ts >= cutoff && i.outcome !== null)
+    .sort((a, b) => b.ts - a.ts)
+    .slice(0, 5);
+  return {
+    count: recent.length,
+    recent: recent.map(i => ({ outcome: i.outcome, faultType: i.faultType, ts: i.ts, durationMs: i.durationMs, actions: i.actions })),
+  };
+}
+
 export function getRecentIncidents(limit = 20): Array<{
   incidentId: string; nodeId: string; event: string;
   faultType: string | null; outcome: string | null; durationMs: number | null; ts: number;

@@ -3,7 +3,7 @@ import Docker from 'dockerode';
 import type { FleetGraph } from './mockFleet.js';
 import type { NodeHistory } from './telemetry.js';
 import {
-  openIncident, closeIncident, getPatterns,
+  openIncident, closeIncident, getPatterns, getNodeIncidentSummary,
   recordPatternResult, type IncidentAction, type PatternEntry,
 } from './playbook.js';
 
@@ -144,9 +144,13 @@ const tools: Anthropic.Tool[] = [
 export async function runFireman(ctx: FiremanContext): Promise<void> {
   const { incidentId, nodeId, event, telemetry, fleetSnapshot, getNodeStatus, emit } = ctx;
   const startMs   = Date.now();
-  const faultType = classifyFault(telemetry);
-  const proxy     = nodeToProxy(nodeId);
-  const patterns  = getPatterns();
+  const baseFault  = classifyFault(telemetry);
+  const nodeSummary = getNodeIncidentSummary(nodeId);
+  // If this node has failed ≥2 times in the last hour, treat it as endemic
+  // regardless of what the telemetry window shows for this incident alone.
+  const faultType  = nodeSummary.count >= 2 ? 'endemic' : baseFault;
+  const proxy      = nodeToProxy(nodeId);
+  const patterns   = getPatterns();
 
   const model = patterns.some(p =>
     p.faultSig.includes(nodeId) && p.successCount >= 3 &&
@@ -154,7 +158,7 @@ export async function runFireman(ctx: FiremanContext): Promise<void> {
   ) ? 'claude-haiku-4-5-20251001' : 'claude-sonnet-4-6';
 
   openIncident(incidentId, nodeId, event);
-  emit('fireman:spawned', { incidentId, nodeId, event, faultType, model });
+  emit('fireman:spawned', { incidentId, nodeId, event, faultType, model, priorCount: nodeSummary.count });
   console.log(`[FIREMAN] ${incidentId} spawned model=${model} node=${nodeId} fault=${faultType}`);
 
   const otherNodes = fleetSnapshot.nodes
@@ -167,6 +171,20 @@ export async function runFireman(ctx: FiremanContext): Promise<void> {
     ...((telemetry.stats  ?? []).slice(-3).map(s => `  stats cpu=${s.cpu.toFixed(1)}% mem=${Math.round(s.memUsed / 1e6)}MB`)),
   ].join('\n') || '  (no recent history)';
 
+  const priorHistoryText = nodeSummary.count === 0
+    ? '  No prior incidents for this node in the last hour.'
+    : nodeSummary.recent.map((r, i) => {
+        const ago    = Math.round((Date.now() - r.ts) / 60_000);
+        const acts   = r.actions.length > 0 ? r.actions.map(a => a.action).join(' → ') : 'none';
+        return `  ${i + 1}. ${ago}m ago — fault=${r.faultType ?? '?'} outcome=${r.outcome ?? 'open'} actions=[${acts}]`;
+      }).join('\n');
+
+  const urgencyNote = nodeSummary.count === 0
+    ? 'First incident on this node.'
+    : nodeSummary.count === 1
+      ? `⚠ SECOND incident on this node in the last hour. The previous recovery may not have addressed the root cause. Look for a pattern.`
+      : `🚨 ${nodeSummary.count + 1} incidents on this node in the last hour. This is a recurring instability. Prior restarts have not held. Escalate unless you have a specific reason to believe this attempt will be different.`;
+
   const initialPrompt = `You are the recovery agent (Fireman) for a distributed kiosk fleet.
 
 Incident:
@@ -175,6 +193,11 @@ Incident:
   Event    : ${event}
   Fault    : ${faultType} (classified from telemetry)
   ${proxy ? `Proxy    : ${proxy}` : 'Proxy    : (no upstream proxy — homebase-tier node)'}
+
+${urgencyNote}
+
+Prior incidents this node (last hour):
+${priorHistoryText}
 
 Telemetry (recent history):
 ${telemetrySummary}
@@ -191,7 +214,7 @@ Fault classification guide:
   code     → CPU spike or hang pattern before death → restart_container
   endemic  → multiple deaths in short window → escalate immediately, do not loop
 
-Choose ONE action. If the playbook has a reliable response for this pattern, prefer it.`;
+Choose ONE action. If the playbook has a reliable response for this pattern, prefer it. Your reason field should reference the incident history — if this is a repeat failure, say so explicitly.`;
 
   const client = new Anthropic();
   const messages: Anthropic.MessageParam[] = [

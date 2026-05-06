@@ -64,13 +64,15 @@ export default function AnimationController() {
       });
     }
 
-    function onFiremanSpawned(data: { nodeId: string; faultType?: string }) {
+    function onFiremanSpawned(data: { nodeId: string; faultType?: string; priorCount?: number }) {
       pushAnimation(data.nodeId, { type: 'fireman-pulse', startedAt: Date.now() });
+      const priorCount = data.priorCount ?? 0;
+      const incidentTag = priorCount > 0 ? ` · #${priorCount + 1}` : '';
       addToast({
-        text:   `🔥 Recovery → ${data.nodeId}${data.faultType ? ` (${data.faultType})` : ''}`,
-        color:  '#93c5fd',
-        bg:     '#0c1a2e',
-        border: '#1e3a5f',
+        text:   `🔥 Recovery → ${data.nodeId}${data.faultType ? ` (${data.faultType}${incidentTag})` : ''}`,
+        color:  priorCount >= 2 ? '#fca5a5' : priorCount === 1 ? '#fcd34d' : '#93c5fd',
+        bg:     priorCount >= 2 ? '#450a0a' : priorCount === 1 ? '#451a03' : '#0c1a2e',
+        border: priorCount >= 2 ? '#7f1d1d' : priorCount === 1 ? '#78350f' : '#1e3a5f',
       });
     }
 
