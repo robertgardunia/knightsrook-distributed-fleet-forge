@@ -2,7 +2,7 @@ import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 're
 import ForceGraph2D from 'react-force-graph-2d';
 import { forceCollide } from 'd3-force-3d';
 import type { FleetGraph, FleetNode } from '../types/fleet';
-import { getAnimations, hasActiveAnimations } from '../lib/nodeAnimations';
+import { getAnimations } from '../lib/nodeAnimations';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type FGInstance = any;
@@ -27,14 +27,18 @@ interface Props {
 
 const FleetGraph = forwardRef<FleetGraphHandle, Props>(function FleetGraph({ graph, onNodeSelect, selectedNodeId }, ref) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const fgRef = useRef<FGInstance>(null);
+  const fgRef        = useRef<FGInstance>(null);
+  const overlayRef   = useRef<HTMLCanvasElement>(null);
+  const graphRef     = useRef(graph);
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
   const charge = -60;
   const manualZoom = useRef(false);
 
+  // Keep graphRef current so the overlay rAF closure always sees latest nodes
+  useEffect(() => { graphRef.current = graph; }, [graph]);
+
   useImperativeHandle(ref, () => ({
     zoomToNode(id: string) {
-      // graph.nodes are mutated in-place by d3-force — same objects, live x/y
       const node = (graph.nodes as Array<FleetNode & { x?: number; y?: number }>)
         .find(n => n.id === id);
       if (node?.x == null) return;
@@ -46,6 +50,7 @@ const FleetGraph = forwardRef<FleetGraphHandle, Props>(function FleetGraph({ gra
       fgRef.current?.d3ReheatSimulation();
     },
   }), [graph.nodes]);
+
   useEffect(() => {
     if (!containerRef.current) return;
     const observer = new ResizeObserver((entries) => {
@@ -81,15 +86,99 @@ const FleetGraph = forwardRef<FleetGraphHandle, Props>(function FleetGraph({ gra
     }
   }, [selectedNodeId]);
 
-  // Keep the force-graph render loop alive while node animations are active.
-  // refresh() only triggers one repaint; resumeAnimation() restarts the internal
-  // rAF loop so nodeCanvasObject fires every frame with a fresh Date.now().
+  // Overlay canvas: draw all ring animations on a separate canvas we fully control.
+  // Runs every rAF frame regardless of force-graph simulation state.
   useEffect(() => {
     let rafId: number;
+
     function tick() {
-      if (hasActiveAnimations()) fgRef.current?.resumeAnimation();
+      const canvas = overlayRef.current;
+      const fg     = fgRef.current;
+      if (!canvas || !fg) { rafId = requestAnimationFrame(tick); return; }
+
+      const ctx = canvas.getContext('2d');
+      if (!ctx) { rafId = requestAnimationFrame(tick); return; }
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      const now  = Date.now();
+      const zoom = fg.zoom() as number;
+      const nodes = graphRef.current.nodes as Array<FleetNode & { x?: number; y?: number }>;
+
+      for (const node of nodes) {
+        if (node.x == null || node.y == null) continue;
+        const anims = getAnimations(node.id);
+        const hasAnims = anims.length > 0;
+        const needsPulse = node.alerting || hasAnims;
+        if (!hasAnims && !needsPulse) continue;
+
+        const sc = fg.graph2ScreenCoords(node.x, node.y) as { x: number; y: number };
+        const baseR = Math.sqrt(node.val) * 3 * zoom;
+
+        // Chaos shockwave — two expanding red rings
+        for (const anim of anims.filter(a => a.type === 'chaos-shockwave')) {
+          const p  = Math.min(1, (now - anim.startedAt) / (anim.durationMs ?? 1600));
+          const r1 = baseR + p * 48;
+          const a1 = 0.85 * (1 - p);
+          if (a1 > 0) {
+            ctx.beginPath();
+            ctx.arc(sc.x, sc.y, r1, 0, 2 * Math.PI);
+            ctx.strokeStyle = `rgba(248,113,113,${a1})`;
+            ctx.lineWidth = 2.5;
+            ctx.stroke();
+          }
+          const p2 = Math.max(0, p - 0.18);
+          const r2 = baseR + p2 * 48;
+          const a2 = 0.5 * Math.max(0, 1 - p / 0.85);
+          if (a2 > 0) {
+            ctx.beginPath();
+            ctx.arc(sc.x, sc.y, r2, 0, 2 * Math.PI);
+            ctx.strokeStyle = `rgba(248,113,113,${a2})`;
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+          }
+        }
+
+        // Recovery burst — three cascading green rings
+        for (const anim of anims.filter(a => a.type === 'recovery-burst')) {
+          const p = Math.min(1, (now - anim.startedAt) / (anim.durationMs ?? 2200));
+          for (let i = 0; i < 3; i++) {
+            const pi = Math.max(0, p - i * 0.14);
+            const r  = baseR + pi * 56;
+            const a  = 0.8 * (1 - pi);
+            if (a <= 0) continue;
+            ctx.beginPath();
+            ctx.arc(sc.x, sc.y, r, 0, 2 * Math.PI);
+            ctx.strokeStyle = `rgba(74,222,128,${a})`;
+            ctx.lineWidth = 2.5 - i * 0.6;
+            ctx.stroke();
+          }
+        }
+
+        // Alerting ring — pulsing orange
+        if (node.alerting) {
+          const pulse = 0.4 + 0.4 * Math.sin(now / 350);
+          ctx.beginPath();
+          ctx.arc(sc.x, sc.y, baseR + 7, 0, 2 * Math.PI);
+          ctx.strokeStyle = `rgba(251,146,60,${pulse})`;
+          ctx.lineWidth = 2.5;
+          ctx.stroke();
+        }
+
+        // Recovery-agent pulse — blue beating ring while incident is being worked
+        if (anims.some(a => a.type === 'fireman-pulse')) {
+          const pulse = 0.35 + 0.45 * Math.sin(now / 400);
+          ctx.beginPath();
+          ctx.arc(sc.x, sc.y, baseR + 9, 0, 2 * Math.PI);
+          ctx.strokeStyle = `rgba(96,165,250,${pulse})`;
+          ctx.lineWidth = 2.5;
+          ctx.stroke();
+        }
+      }
+
       rafId = requestAnimationFrame(tick);
     }
+
     rafId = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(rafId);
   }, []);
@@ -150,11 +239,10 @@ const FleetGraph = forwardRef<FleetGraphHandle, Props>(function FleetGraph({ gra
         nodeCanvasObject={(node, ctx, globalScale) => {
           const n = node as unknown as FleetNode & { x: number; y: number };
           const isSelected = n.id === selectedNodeId;
-          const isDimmed = !!selectedNodeId && !isSelected;
-          const isKiosk = n.role === 'game-kiosk' || n.role === 'info-kiosk';
-          const radius = Math.sqrt(n.val) * 3;
+          const isDimmed   = !!selectedNodeId && !isSelected;
+          const isKiosk    = n.role === 'game-kiosk' || n.role === 'info-kiosk';
+          const radius     = Math.sqrt(n.val) * 3;
 
-          // Blend a hex color toward the dark background for true dimming (no transparency)
           const dim = (hex: string, t = 0.35): string => {
             const c = parseInt(hex.slice(1), 16);
             const r = Math.round(((c >> 16) & 0xff) * t);
@@ -162,69 +250,6 @@ const FleetGraph = forwardRef<FleetGraphHandle, Props>(function FleetGraph({ gra
             const b = Math.round(( c        & 0xff) * t);
             return `rgb(${r},${g},${b})`;
           };
-
-          const now  = Date.now();
-          const anims = getAnimations(n.id);
-
-          // Chaos shockwave — two expanding red rings
-          for (const anim of anims.filter(a => a.type === 'chaos-shockwave')) {
-            const p = Math.min(1, (now - anim.startedAt) / (anim.durationMs ?? 1500));
-            const r1 = radius + (p * 48) / globalScale;
-            const a1 = 0.85 * (1 - p);
-            if (a1 > 0) {
-              ctx.beginPath();
-              ctx.arc(n.x, n.y, r1, 0, 2 * Math.PI);
-              ctx.strokeStyle = `rgba(248,113,113,${a1})`;
-              ctx.lineWidth = 2.5 / globalScale;
-              ctx.stroke();
-            }
-            const p2 = Math.max(0, p - 0.18);
-            const r2 = radius + (p2 * 48) / globalScale;
-            const a2 = 0.5 * Math.max(0, 1 - p / 0.85);
-            if (a2 > 0) {
-              ctx.beginPath();
-              ctx.arc(n.x, n.y, r2, 0, 2 * Math.PI);
-              ctx.strokeStyle = `rgba(248,113,113,${a2})`;
-              ctx.lineWidth = 1.5 / globalScale;
-              ctx.stroke();
-            }
-          }
-
-          // Recovery burst — three cascading green rings
-          for (const anim of anims.filter(a => a.type === 'recovery-burst')) {
-            const p = Math.min(1, (now - anim.startedAt) / (anim.durationMs ?? 2000));
-            for (let i = 0; i < 3; i++) {
-              const pi = Math.max(0, p - i * 0.14);
-              const r  = radius + (pi * 56) / globalScale;
-              const a  = 0.8 * (1 - pi);
-              if (a <= 0) continue;
-              ctx.beginPath();
-              ctx.arc(n.x, n.y, r, 0, 2 * Math.PI);
-              ctx.strokeStyle = `rgba(74,222,128,${a})`;
-              ctx.lineWidth = (2.5 - i * 0.6) / globalScale;
-              ctx.stroke();
-            }
-          }
-
-          // Alerting ring (orange pulse)
-          if (n.alerting) {
-            const pulse = 0.4 + 0.4 * Math.sin(now / 350);
-            ctx.beginPath();
-            ctx.arc(n.x, n.y, radius + 7 / globalScale, 0, 2 * Math.PI);
-            ctx.strokeStyle = `rgba(251,146,60,${pulse})`;
-            ctx.lineWidth = 2.5 / globalScale;
-            ctx.stroke();
-          }
-
-          // Fireman pulse — blue beating ring while recovery is in progress
-          if (anims.some(a => a.type === 'fireman-pulse')) {
-            const pulse = 0.35 + 0.45 * Math.sin(now / 400);
-            ctx.beginPath();
-            ctx.arc(n.x, n.y, radius + 9 / globalScale, 0, 2 * Math.PI);
-            ctx.strokeStyle = `rgba(96,165,250,${pulse})`;
-            ctx.lineWidth = 2.5 / globalScale;
-            ctx.stroke();
-          }
 
           if (isSelected) {
             ctx.beginPath();
@@ -254,6 +279,18 @@ const FleetGraph = forwardRef<FleetGraphHandle, Props>(function FleetGraph({ gra
         nodeCanvasObjectMode={() => 'replace'}
       />
 
+      {/* Overlay canvas for animated rings — independent rAF loop, pointer-events disabled */}
+      <canvas
+        ref={overlayRef}
+        width={dimensions.width}
+        height={dimensions.height}
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          pointerEvents: 'none',
+        }}
+      />
     </div>
   );
 });
