@@ -34,7 +34,7 @@ Node history is held in-memory (no external database). Stats are sampled every 5
 |---|---|
 | `GET /api/fleet` | Current fleet graph as `{ nodes[], links[] }` — live registry only (no mock fallback). |
 | `GET /api/chaos/ready` | Returns `{ ready: true }` once the lab homebase container is answering on `:5025`. The dashboard's `waitForLab()` polls this — but first waits for the probe to go DOWN (confirming `--force-recreate` killed old containers) before waiting for it to come back UP. This prevents connecting to stale containers. |
-| `POST /api/chaos/trigger` | Fires one chaos cycle immediately — emits `chaos:trigger` to the chaos agent which runs `runChaosStep()` without waiting for the next scheduled interval. Exposed as an `⚡ Chaos` button in the dashboard header (visible in Online Lab mode only). |
+| `POST /api/chaos/trigger` | Fires one chaos cycle immediately — emits `chaos:trigger` to the chaos agent which runs `runChaosStep(forced=true)`. Forced cycles use SPREAD MODE: `observe` is excluded, constraints 2/3 (escalate same station) are overridden, and Haiku is instructed to target the station with least recent activity. A step lock (`stepInFlight`) prevents concurrent execution. Client-side guard (`chaosGuard` ref) prevents duplicate fires before React re-renders the disabled state. |
 | `GET /api/telemetry/:nodeId` | Returns `{ nodeId, windowMs, stats[], events[] }` for the node. Optional `?window=<ms>` param (default 5 minutes). |
 
 Each station controller also exposes its own telemetry HTTP server (same port as the relay, `:5021`) for homebase pull-sync:

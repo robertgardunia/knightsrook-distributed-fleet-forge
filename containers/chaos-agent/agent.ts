@@ -98,7 +98,7 @@ async function buildSituations(graph: FleetGraph): Promise<StationSituation[]> {
   );
 }
 
-function buildPrompt(situations: StationSituation[]): string {
+function buildPrompt(situations: StationSituation[], forced: boolean): string {
   const blocks = situations.map(s => {
     const ctrl    = `controller=${s.controllerStatus}${s.controllerAlerting ? ' ALERTING' : ''}`;
     const kStatus = s.kiosks.alive === s.kiosks.total
@@ -112,6 +112,21 @@ function buildPrompt(situations: StationSituation[]): string {
   Active faults : ${s.activeFaults}
   History       : ${hist}`;
   }).join('\n\n');
+
+  // For forced/manual triggers, find the most recently targeted station so we
+  // can explicitly tell Haiku to go elsewhere.
+  let forcedAddendum = '';
+  if (forced) {
+    const allHistory = situations.flatMap(s => s.history.map(h => ({ station: s.id, h })));
+    const lastEntry  = allHistory[allHistory.length - 1];
+    const avoidHint  = lastEntry
+      ? `The most recent action targeted ${lastEntry.station.toUpperCase()} (${lastEntry.h}). Do NOT act on ${lastEntry.station.toUpperCase()} again this cycle.`
+      : 'All stations are clean — start fresh incidents on multiple stations.';
+
+    forcedAddendum = `
+
+⚡ MANUAL DEMO TRIGGER — SPREAD MODE: Override constraints 2 and 3. Do NOT deepen an existing story or re-target the same node. Your job right now is to demonstrate that failures happen INDEPENDENTLY across the fleet. Pick the station with the least recent activity and start a brand new, unrelated incident there. ${avoidHint} Use a different fault category than the last action if possible.`;
+  }
 
   return `You are a chaos engineer stress-testing a distributed kiosk fleet deployed across four physical stations. Each station is a separate venue installation that can fail in its own way for its own reasons. Your job is to create realistic, independent failure narratives — not uniform chaos.
 
@@ -143,7 +158,7 @@ Constraints:
 5. Code failures (hang_process) are universal — they can be layered on top of any station situation or start a new story on a clean station. A hung kiosk on top of a degraded network is a compound failure.
 6. Use observe when you're waiting for a fault to show up in node status before deciding the next move.
 
-Choose exactly ONE action. The reason field should read like a plausible incident report — what specifically is happening in the real world right now.`;
+Choose exactly ONE action. The reason field should read like a plausible incident report — what specifically is happening in the real world right now.${forcedAddendum}`;
 }
 
 const tools: Anthropic.Tool[] = [
@@ -335,8 +350,8 @@ async function runChaosStep(forced = false): Promise<void> {
     return;
   }
 
-  const situations = await buildSituations(fleetGraph);
-  const prompt     = buildPrompt(situations);
+  const situations  = await buildSituations(fleetGraph);
+  const prompt      = buildPrompt(situations, forced);
   // Manual trigger: exclude observe — user clicked the button expecting something to happen
   const activeTools = forced ? tools.filter(t => t.name !== 'observe') : tools;
 
@@ -367,13 +382,27 @@ async function chaosLoop(): Promise<void> {
 
   while (true) {
     try {
-      await runChaosStep();
+      await runWithLock(false);
     } catch (err) {
       console.error('[HAIKU] step error:', err);
     }
     const delay = rand(MIN_MS, MAX_MS);
     console.log(`[HAIKU] next action in ${Math.round(delay / 1000)}s`);
     await new Promise(r => setTimeout(r, delay));
+  }
+}
+
+// Serialise all step execution — prevents concurrent Haiku calls from reading
+// the same fleet state / history and making identical decisions.
+let stepInFlight = false;
+
+async function runWithLock(forced: boolean): Promise<void> {
+  if (stepInFlight) return;
+  stepInFlight = true;
+  try {
+    await runChaosStep(forced);
+  } finally {
+    stepInFlight = false;
   }
 }
 
@@ -386,8 +415,12 @@ socket.on('connect', () => {
   if (!started) { started = true; chaosLoop(); }
 });
 socket.on('chaos:trigger', () => {
+  if (stepInFlight) {
+    console.log('[HAIKU] trigger received while step in flight — dropping duplicate');
+    return;
+  }
   console.log('[HAIKU] manual trigger received — running step now (forced, no observe)');
-  runChaosStep(true).catch(err => console.error('[HAIKU] trigger step error:', err));
+  runWithLock(true).catch(err => console.error('[HAIKU] trigger step error:', err));
 });
 socket.on('connect_error', (err) => {
   console.error('[HAIKU] connect error:', err.message);

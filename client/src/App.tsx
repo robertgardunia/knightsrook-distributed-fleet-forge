@@ -113,6 +113,7 @@ export default function App() {
   const [searchOpen, setSearchOpen] = useState(false);
   const fgHandle = useRef<FleetGraphHandle>(null);
   const gridRef = useRef<HTMLDivElement>(null);
+  const chaosGuard = useRef(false);
   const isForging = labMode === 'lab' && graph.isMock !== false;
 
   const visibleGraph = (() => {
@@ -335,12 +336,17 @@ export default function App() {
           {labConnected && !isForging && (
             <button
               disabled={chaosFiring}
-              onClick={async () => {
+              onClick={() => {
+                if (chaosGuard.current) return;
+                chaosGuard.current = true;
                 setChaosFiring(true);
                 // Must hit the homebase container directly — chaos agent is connected
                 // to homebase:5020 (container), not the host dev server socket.io
-                await fetch(`${LAB_SERVER}/api/chaos/trigger`, { method: 'POST' });
-                setTimeout(() => setChaosFiring(false), 1500);
+                fetch(`${LAB_SERVER}/api/chaos/trigger`, { method: 'POST' })
+                  .finally(() => setTimeout(() => {
+                    chaosGuard.current = false;
+                    setChaosFiring(false);
+                  }, 3000));
               }}
               title="Trigger one chaos cycle now"
               style={{
