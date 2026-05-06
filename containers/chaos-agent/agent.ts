@@ -98,7 +98,18 @@ async function buildSituations(graph: FleetGraph): Promise<StationSituation[]> {
   );
 }
 
-function buildPrompt(situations: StationSituation[], forced: boolean): string {
+// For manual triggers, pick the station with the fewest recent actions so each
+// click lands on a fresh target. Tiebreak toward cleaner stations (no active faults).
+function pickFreshStation(situations: StationSituation[]): StationSituation {
+  return [...situations].sort((a, b) => {
+    if (a.history.length !== b.history.length) return a.history.length - b.history.length;
+    const score = (s: StationSituation) =>
+      (s.activeFaults !== 'none' ? 2 : 0) + s.kiosks.alerting + s.kiosks.dead;
+    return score(a) - score(b);
+  })[0];
+}
+
+function buildPrompt(situations: StationSituation[]): string {
   const blocks = situations.map(s => {
     const ctrl    = `controller=${s.controllerStatus}${s.controllerAlerting ? ' ALERTING' : ''}`;
     const kStatus = s.kiosks.alive === s.kiosks.total
@@ -113,22 +124,12 @@ function buildPrompt(situations: StationSituation[], forced: boolean): string {
   History       : ${hist}`;
   }).join('\n\n');
 
-  // For forced/manual triggers, find the most recently targeted station so we
-  // can explicitly tell Haiku to go elsewhere.
-  let forcedAddendum = '';
-  if (forced) {
-    const allHistory = situations.flatMap(s => s.history.map(h => ({ station: s.id, h })));
-    const lastEntry  = allHistory[allHistory.length - 1];
-    const avoidHint  = lastEntry
-      ? `The most recent action targeted ${lastEntry.station.toUpperCase()} (${lastEntry.h}). Do NOT act on ${lastEntry.station.toUpperCase()} again this cycle.`
-      : 'All stations are clean — start fresh incidents on multiple stations.';
+  const isTargeted = situations.length === 1;
+  const stationNote = isTargeted
+    ? `\nYou are responsible for station ${situations[0].id.toUpperCase()} only. Act on this station.`
+    : '';
 
-    forcedAddendum = `
-
-⚡ MANUAL DEMO TRIGGER — SPREAD MODE: Override constraints 2 and 3. Do NOT deepen an existing story or re-target the same node. Your job right now is to demonstrate that failures happen INDEPENDENTLY across the fleet. Pick the station with the least recent activity and start a brand new, unrelated incident there. ${avoidHint} Use a different fault category than the last action if possible.`;
-  }
-
-  return `You are a chaos engineer stress-testing a distributed kiosk fleet deployed across four physical stations. Each station is a separate venue installation that can fail in its own way for its own reasons. Your job is to create realistic, independent failure narratives — not uniform chaos.
+  return `You are a chaos engineer stress-testing a distributed kiosk fleet deployed across four physical stations. Each station is a separate venue installation that can fail in its own way for its own reasons. Your job is to create realistic, independent failure narratives — not uniform chaos.${stationNote}
 
 Current situation per station:
 
@@ -158,7 +159,7 @@ Constraints:
 5. Code failures (hang_process) are universal — they can be layered on top of any station situation or start a new story on a clean station. A hung kiosk on top of a degraded network is a compound failure.
 6. Use observe when you're waiting for a fault to show up in node status before deciding the next move.
 
-Choose exactly ONE action. The reason field should read like a plausible incident report — what specifically is happening in the real world right now.${forcedAddendum}`;
+Choose exactly ONE action. The reason field should read like a plausible incident report — what specifically is happening in the real world right now.`;
 }
 
 const tools: Anthropic.Tool[] = [
@@ -350,8 +351,12 @@ async function runChaosStep(forced = false): Promise<void> {
     return;
   }
 
-  const situations  = await buildSituations(fleetGraph);
-  const prompt      = buildPrompt(situations, forced);
+  const situations = await buildSituations(fleetGraph);
+  // Manual trigger: pre-select the station with the least recent activity so each
+  // click lands on a fresh target. The model only sees that one station — no
+  // temptation to pile on an already-alerting node at a different station.
+  const promptSituations = forced ? [pickFreshStation(situations)] : situations;
+  const prompt      = buildPrompt(promptSituations);
   // Manual trigger: exclude observe — user clicked the button expecting something to happen
   const activeTools = forced ? tools.filter(t => t.name !== 'observe') : tools;
 
