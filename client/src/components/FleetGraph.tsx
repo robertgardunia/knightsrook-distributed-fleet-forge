@@ -118,7 +118,7 @@ const FleetGraph = forwardRef<FleetGraphHandle, Props>(function FleetGraph({ gra
         // Chaos shockwave — two expanding red rings
         for (const anim of anims.filter(a => a.type === 'chaos-shockwave')) {
           const p  = Math.min(1, (now - anim.startedAt) / (anim.durationMs ?? 1600));
-          const r1 = baseR + p * 48;
+          const r1 = baseR + p * 28;
           const a1 = 0.85 * (1 - p);
           if (a1 > 0) {
             ctx.beginPath();
@@ -128,7 +128,7 @@ const FleetGraph = forwardRef<FleetGraphHandle, Props>(function FleetGraph({ gra
             ctx.stroke();
           }
           const p2 = Math.max(0, p - 0.18);
-          const r2 = baseR + p2 * 48;
+          const r2 = baseR + p2 * 28;
           const a2 = 0.5 * Math.max(0, 1 - p / 0.85);
           if (a2 > 0) {
             ctx.beginPath();
@@ -144,7 +144,7 @@ const FleetGraph = forwardRef<FleetGraphHandle, Props>(function FleetGraph({ gra
           const p = Math.min(1, (now - anim.startedAt) / (anim.durationMs ?? 2200));
           for (let i = 0; i < 3; i++) {
             const pi = Math.max(0, p - i * 0.14);
-            const r  = baseR + pi * 56;
+            const r  = baseR + pi * 30;
             const a  = 0.8 * (1 - pi);
             if (a <= 0) continue;
             ctx.beginPath();
@@ -155,24 +155,38 @@ const FleetGraph = forwardRef<FleetGraphHandle, Props>(function FleetGraph({ gra
           }
         }
 
-        // Alerting ring — pulsing orange
+        // Alerting — continuously looping orange ripple (two staggered waves)
         if (node.alerting) {
-          const pulse = 0.4 + 0.4 * Math.sin(now / 350);
-          ctx.beginPath();
-          ctx.arc(sc.x, sc.y, baseR + 7, 0, 2 * Math.PI);
-          ctx.strokeStyle = `rgba(251,146,60,${pulse})`;
-          ctx.lineWidth = 2.5;
-          ctx.stroke();
+          const period = 1800;
+          for (let w = 0; w < 2; w++) {
+            const p = ((now + w * (period / 2)) % period) / period;
+            const r = baseR + p * 22;
+            const a = 0.7 * (1 - p);
+            if (a > 0.01) {
+              ctx.beginPath();
+              ctx.arc(sc.x, sc.y, r, 0, 2 * Math.PI);
+              ctx.strokeStyle = `rgba(251,146,60,${a})`;
+              ctx.lineWidth = 2;
+              ctx.stroke();
+            }
+          }
         }
 
-        // Recovery-agent pulse — blue beating ring while incident is being worked
+        // Recovery agent working — continuously looping blue ripple
         if (anims.some(a => a.type === 'fireman-pulse')) {
-          const pulse = 0.35 + 0.45 * Math.sin(now / 400);
-          ctx.beginPath();
-          ctx.arc(sc.x, sc.y, baseR + 9, 0, 2 * Math.PI);
-          ctx.strokeStyle = `rgba(96,165,250,${pulse})`;
-          ctx.lineWidth = 2.5;
-          ctx.stroke();
+          const period = 2200;
+          for (let w = 0; w < 2; w++) {
+            const p = ((now + w * (period / 2)) % period) / period;
+            const r = baseR + p * 20;
+            const a = 0.65 * (1 - p);
+            if (a > 0.01) {
+              ctx.beginPath();
+              ctx.arc(sc.x, sc.y, r, 0, 2 * Math.PI);
+              ctx.strokeStyle = `rgba(96,165,250,${a})`;
+              ctx.lineWidth = 2;
+              ctx.stroke();
+            }
+          }
         }
       }
 
