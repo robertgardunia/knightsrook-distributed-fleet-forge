@@ -36,8 +36,15 @@ export default function AnimationController() {
   }
 
   useEffect(() => {
-    // Clear all stale animations when the fleet graph is received fresh (reconnect/mode switch)
-    function onFleetGraph() { clearAll(); }
+    // Clear animations only when isMock changes — i.e. when switching between Online Lab
+    // and Offline Demo. Regular fleet:graph events (heartbeat timeouts, status changes)
+    // must NOT clear animations or they get wiped the moment they're pushed.
+    let prevIsMock: boolean | undefined;
+    function onFleetGraph(data: { isMock?: boolean }) {
+      const curr = data.isMock ?? false;
+      if (prevIsMock !== undefined && curr !== prevIsMock) clearAll();
+      prevIsMock = curr;
+    }
     socket.on('fleet:graph', onFleetGraph);
     return () => { socket.off('fleet:graph', onFleetGraph); };
   }, []);

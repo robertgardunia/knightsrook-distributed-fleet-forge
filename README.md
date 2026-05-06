@@ -59,7 +59,7 @@ Station telemetry records kiosk events only (register / alerting / dead / recove
 
 ## Dashboard
 
-The left sidebar is a live activity log — chaos actions (red), fireman spawns (blue), recoveries (green), and escalations (yellow) stream in with timestamps and agent labels. The right sidebar shows fleet status counts and the accumulated playbook of resolved incident patterns (success rate, count, avg duration).
+The left sidebar is a live activity log — chaos actions (red), fireman spawns (blue), recoveries (green), and escalations (yellow) stream in with timestamps and agent labels. The right sidebar shows fleet status counts and, in Online Lab mode, the accumulated playbook of resolved incident patterns (success rate, count, avg duration). Both the Activity panel and the Playbook section are hidden in Offline Demo mode — they re-appear as soon as you switch to Online Lab.
 
 Click any node in the fleet graph to open a resizable 2×2 panel layout. Drag the center vertical or horizontal divider to resize quadrants.
 
@@ -86,7 +86,7 @@ Three fixed overlays provide real-time narrative visibility during Online Lab mo
 
 Links degrade visually with their target node: alerting → orange slow particles, dead → red crawling particles. Node animations on the force graph:
 - **Red shockwave** — two rings expanding outward from the node when chaos agent targets it
-- Animation store clears on every `fleet:graph` event (reconnect / mode switch) so rings from crashed or restarted lab sessions never persist
+- Animation store clears only when the `isMock` flag changes (Online Lab ↔ Offline Demo switch) — normal heartbeat/status `fleet:graph` events do not clear animations
 - **Blue pulse** — beating ring on a dead node while Fireman is actively working it
 - **Green burst** — three cascading rings on recovery
 
@@ -146,7 +146,17 @@ The header has a two-mode segmented toggle:
 | Mode | Behavior |
 |---|---|
 | **Offline Demo** | Default. Mock fleet via host dev server (port 5020, Vite proxy). No containers needed. Switching to it calls `POST /api/chaos/stop`, clears registry, reconnects socket to Vite proxy. |
-| **Online Lab** | Calls `POST /api/chaos/start` → `docker compose -f docker-compose.chaos.yml up --build -d`. All fleet servers are real containers — homebase publishes fleet socket on port **5025**, dashboard reconnects directly to `localhost:5025`. Station controllers connect to `homebase:5020` inside Docker; Toxiproxy can inject failures on `fleet-net`. Graph clears on switch; "Forging Network" overlay shows until agents register. |
+| **Online Lab** | Calls `POST /api/chaos/start` → `docker compose -f docker-compose.chaos.yml up --build -d`. All fleet servers are real containers — homebase publishes fleet socket on port **5025**, dashboard reconnects directly to `localhost:5025`. Station controllers connect to `homebase:5020` inside Docker; Toxiproxy can inject failures on `fleet-net`. Graph clears on switch; "Forging Network" overlay shows until agents register. Activity panel and Playbook appear. |
+
+Three reset controls appear in the header while in Online Lab mode:
+
+| Control | Server call | Effect |
+|---|---|---|
+| **⟳ Nodes** | `POST /api/reset/nodes` | `docker compose restart` — restarts all containers; socket reconnects once homebase is back up |
+| **⟳ Playbook** | `POST /api/reset/playbook` | Wipes `server/data/playbook.json` and in-memory patterns/incidents |
+| **⟳ Activity** | client-side | Clears the Activity panel log (no server state touched) |
+
+Switching back to Offline Demo retains the playbook. Reset Playbook is the only action that blows it away.
 
 The chaos API (`/api/chaos/start|stop`) always routes through the Vite proxy to the host dev server (port 5020) because that process has Docker CLI access. Fleet state (socket.io) switches servers on mode change without a page reload — the same exported socket reference is reused by all components.
 
@@ -171,7 +181,7 @@ docker compose -f docker-compose.chaos.yml up --build
 
 Each station-controller runs a relay (`containers/station-controller/`) that connects upstream to homebase and listens downstream for kiosk registrations — the cascade autonomy seam.
 
-Game kiosks (`containers/game-kiosk/`) run Chromium (headless, SwiftShader software WebGL) loading HexGL on port 8080: title screen → INSERT COIN attract cycle → pre-recorded replay. Info kiosks (`containers/info-kiosk/`) run Chromium loading a slideshow of simulator guide slides. Both kiosk containers are fully autonomous — they boot and run independently of the fleet monitor; if upstream connectivity is lost the game/slideshow continues. Docker stats reflect real Chromium CPU/memory from rendering the live application. The dashboard's Screen view is a separate operator viewport. Game kiosks show a static HexGL screenshot — the game runs autonomously in the container's headless Chromium and the dashboard does not trigger or load it. Info kiosks show a live iframe of their nginx slideshow page. Mute/audio toggle on the Screen view controls the dashboard iframe, not the kiosk container.
+Game kiosks (`containers/game-kiosk/`) run Chromium (headless, SwiftShader software WebGL) loading HexGL on port 8080: title screen → INSERT COIN attract cycle → pre-recorded replay. Info kiosks (`containers/info-kiosk/`) run Chromium loading a slideshow of simulator guide slides. Both kiosk containers are fully autonomous — they boot and run independently of the fleet monitor; if upstream connectivity is lost the game/slideshow continues. Docker stats reflect real Chromium CPU/memory from rendering the live application. The dashboard's Screen view is a separate operator viewport. In Online Lab mode, both game kiosks and info kiosks show a live iframe of their nginx-served page (game kiosks: `http://localhost:181xx`, info kiosks: `http://localhost:181x5x`). In Offline Demo mode, game kiosks show a static HexGL screenshot and info kiosks cycle through simulator slide images. Mute/audio toggle on the Screen view controls the dashboard iframe, not the kiosk container.
 
 Each kiosk agent independently simulates activity for the Logs tab: game kiosks log `SIGNIN / GAME_START / LAP_COMPLETE / GAME_OVER / SIGNOUT`; info kiosks log `VISITOR_ARRIVE / SLIDE_VIEW / QR_SCAN / VISITOR_DEPART`. Both also emit xAPI-format statements (`verb=launched`, `verb=progressed`, `verb=completed`, `verb=exited`, `verb=experienced`, `verb=interacted`) alongside each event — groundwork for routing xAPI and system telemetry up the chain. All output is streamed to the Logs tab via docker logs. Both use a two-stage Docker build: TypeScript compiles in stage 1, the runtime stage installs production `node_modules` separately so the fleet agent has `socket.io-client` available. Nginx serves kiosk HTML using the `index` directive (not a redirect) to avoid nginx leaking the internal container port (8080) in Location headers when accessed via host-mapped ports.
 

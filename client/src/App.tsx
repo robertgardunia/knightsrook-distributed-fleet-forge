@@ -107,6 +107,7 @@ export default function App() {
   const [vSplit, setVSplit] = useState(50); // top row %
   const [labConnected, setLabConnected] = useState(false);
   const [chaosFiring, setChaosFiring] = useState(false);
+  const [activityKey, setActivityKey] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
   const fgHandle = useRef<FleetGraphHandle>(null);
@@ -247,6 +248,38 @@ export default function App() {
             </button>
           </div>
 
+          {/* Reset controls — lab mode only */}
+          {labMode === 'lab' && (
+            <div style={{ display: 'flex', gap: 3, marginRight: 8 }}>
+              {([
+                { label: 'Nodes',    title: 'Restart all containers',      action: async () => { await fetch(`${LAB_SERVER}/api/reset/nodes`, { method: 'POST' }); } },
+                { label: 'Playbook', title: 'Clear learned playbook data',  action: async () => { await fetch(`${LAB_SERVER}/api/reset/playbook`, { method: 'POST' }); } },
+                { label: 'Activity', title: 'Clear activity log',           action: () => setActivityKey(k => k + 1) },
+              ] as const).map(({ label, title, action }) => (
+                <button
+                  key={label}
+                  onClick={action}
+                  title={title}
+                  style={{
+                    background: 'transparent',
+                    border: '1px solid #1e293b',
+                    color: '#334155',
+                    padding: '3px 9px',
+                    fontSize: '0.62rem',
+                    cursor: 'pointer',
+                    borderRadius: 2,
+                    letterSpacing: '0.06em',
+                    textTransform: 'uppercase',
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.color = '#f87171'; e.currentTarget.style.borderColor = '#7f1d1d'; }}
+                  onMouseLeave={e => { e.currentTarget.style.color = '#334155'; e.currentTarget.style.borderColor = '#1e293b'; }}
+                >
+                  ⟳ {label}
+                </button>
+              ))}
+            </div>
+          )}
+
           {/* Mode toggle */}
           <div style={{ display: 'flex', border: '1px solid #1e293b', borderRadius: 3, overflow: 'hidden', marginRight: 6 }}>
             {([
@@ -346,7 +379,7 @@ export default function App() {
         /* ── Desktop: absolute 2×2 grid ── */
         <div style={{ flex: 1, minHeight: 0, display: 'flex', overflow: 'hidden' }}>
 
-          <ActivityPanel />
+          {labMode === 'lab' && <ActivityPanel key={activityKey} />}
 
           <div ref={gridRef} style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
 
@@ -467,7 +500,7 @@ export default function App() {
           </div>
 
           {/* Sidebar — fleet status + playbook */}
-          <Sidebar graph={visibleGraph} labConnected={labConnected} apiBase={LAB_SERVER} />
+          <Sidebar graph={visibleGraph} labConnected={labConnected} apiBase={LAB_SERVER} labMode={labMode} />
 
         </div>
       )}

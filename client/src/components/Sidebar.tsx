@@ -24,9 +24,10 @@ interface Props {
   graph:        FleetGraph;
   labConnected: boolean;
   apiBase:      string;
+  labMode:      'demo' | 'lab';
 }
 
-export default function Sidebar({ graph, labConnected, apiBase }: Props) {
+export default function Sidebar({ graph, labConnected, apiBase, labMode }: Props) {
   const [patterns, setPatterns] = useState<PatternEntry[]>([]);
 
   const stations = graph.nodes.filter(n => n.role === 'station-controller');
@@ -92,16 +93,19 @@ export default function Sidebar({ graph, labConnected, apiBase }: Props) {
             <span style={{ color: '#94a3b8' }}>{kiosks.length}</span>
           </div>
 
-          <Divider />
-
-          <div style={{ color: '#475569', fontSize: '0.6rem', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 8 }}>
-            Playbook {patterns.length > 0 ? `· ${patterns.length}` : ''}
-          </div>
+          {labMode === 'lab' && (
+            <>
+              <Divider />
+              <div style={{ color: '#475569', fontSize: '0.6rem', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 8 }}>
+                Playbook {patterns.length > 0 ? `· ${patterns.length}` : ''}
+              </div>
+            </>
+          )}
         </div>
 
-        {patterns.length === 0 ? (
+        {labMode === 'lab' && (patterns.length === 0 ? (
           <div style={{ color: '#1e293b', fontSize: '0.62rem', padding: '0 12px 8px', fontStyle: 'italic' }}>
-            {labConnected ? 'no patterns yet' : 'offline demo'}
+            {labConnected ? 'no patterns yet' : ''}
           </div>
         ) : (
           <div style={{ padding: '0 0 8px' }}>
@@ -129,7 +133,7 @@ export default function Sidebar({ graph, labConnected, apiBase }: Props) {
               );
             })}
           </div>
-        )}
+        ))}
       </div>
     </div>
   );

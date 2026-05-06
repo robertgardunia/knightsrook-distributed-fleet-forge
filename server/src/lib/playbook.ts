@@ -113,6 +113,13 @@ export function recordPatternResult(
   save(store);
 }
 
+export function clearPlaybook(): void {
+  store.patterns  = {};
+  store.incidents = [];
+  save(store);
+  console.log('[playbook] cleared');
+}
+
 export function getRecentIncidents(limit = 20): Array<{
   incidentId: string; nodeId: string; event: string;
   faultType: string | null; outcome: string | null; durationMs: number | null; ts: number;

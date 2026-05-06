@@ -214,9 +214,7 @@ function LiveScreen({ node, live }: { node: FleetNode; live: NodeStats }) {
 }
 
 function ScreenView({ node, isMock, muted, onToggleMute }: { node: FleetNode; isMock?: boolean; muted: boolean; onToggleMute: () => void }) {
-  // Game kiosks always show static screenshots — the game runs in the container's
-  // headless Chromium, not in the dashboard browser.
-  if (node.role === 'game-kiosk') return <GameScreen node={node} />;
+  if (node.role === 'game-kiosk') return isMock ? <GameScreen node={node} /> : <LiveKioskScreen node={node} muted={muted} onToggleMute={onToggleMute} />;
   if (node.role === 'info-kiosk') return isMock ? <InfoScreen node={node} /> : <LiveKioskScreen node={node} muted={muted} onToggleMute={onToggleMute} />;
   return <NoGuiScreen />;
 }
