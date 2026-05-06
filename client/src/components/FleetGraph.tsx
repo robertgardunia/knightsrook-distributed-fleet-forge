@@ -2,7 +2,7 @@ import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 're
 import ForceGraph2D from 'react-force-graph-2d';
 import { forceCollide } from 'd3-force-3d';
 import type { FleetGraph, FleetNode } from '../types/fleet';
-import { getAnimations } from '../lib/nodeAnimations';
+import { getAnimations, hasActiveAnimations } from '../lib/nodeAnimations';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type FGInstance = any;
@@ -80,6 +80,17 @@ const FleetGraph = forwardRef<FleetGraphHandle, Props>(function FleetGraph({ gra
       fgRef.current?.zoomToFit(600, 10);
     }
   }, [selectedNodeId]);
+
+  // Drive canvas repaints while node animations are running
+  useEffect(() => {
+    let rafId: number;
+    function tick() {
+      if (hasActiveAnimations()) fgRef.current?.refresh();
+      rafId = requestAnimationFrame(tick);
+    }
+    rafId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafId);
+  }, []);
 
   return (
     <div ref={containerRef} style={{ width: '100%', height: '100%', position: 'relative' }}>

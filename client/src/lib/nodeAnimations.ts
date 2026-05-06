@@ -26,3 +26,11 @@ export function clearType(nodeId: string, type: AnimationType): void {
   if (!arr) return;
   store.set(nodeId, arr.filter(a => a.type !== type));
 }
+
+export function hasActiveAnimations(): boolean {
+  const now = Date.now();
+  for (const anims of store.values()) {
+    if (anims.some(a => a.durationMs == null || (now - a.startedAt) < a.durationMs)) return true;
+  }
+  return false;
+}
