@@ -294,4 +294,16 @@ The container tsconfigs have `paths` entries pointing to `../../packages/xapi/sr
 -    }
 ```
 
+## Planned: `@knightsrook/auth`
+
+`AuthMethod`, `AuthPathConfig`, and `authPaths.ts` currently live in `@knightsrook/xapi` for convenience but are logically unrelated to xAPI tracking. When real auth is implemented (Moodle credential validation, card reader, etc.) these should move to a dedicated `packages/auth` workspace package (`@knightsrook/auth`).
+
+What belongs there when the time comes:
+- `AuthMethod` / `AuthPathConfig` / `NodeRole` types (from `packages/xapi/src/types.ts`)
+- `AUTH_PATHS` / `getAuthConfig` (from `packages/xapi/src/authPaths.ts`)
+- Moodle API client + credential validation
+- Any shared session token / auth middleware logic
+
+Extraction steps mirror those for `@knightsrook/xapi` above. Until then, the types and config are re-exported from `@knightsrook/xapi` and the misplacement is annotated in source.
+
 Similarly for `server/tsconfig.json` if paths were added there.

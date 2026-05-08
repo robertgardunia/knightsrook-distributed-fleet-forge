@@ -8,18 +8,15 @@ export interface XApiStatement {
   context:   { platform: string; extensions: Record<string, unknown> };
 }
 
+// NOTE: AuthMethod / AuthPathConfig are temporary guests — they belong in a
+// future @knightsrook/auth package once real auth logic exists to justify it.
 export type AuthMethod = 'qr' | 'moodle';
 // future: 'card' | 'pin' | 'sso'
 
 export type NodeRole = 'homebase' | 'station-controller' | 'game-kiosk' | 'info-kiosk';
 
 export interface AuthPathConfig {
-  /** Which sign-in methods are available at this node type. Empty = no auth UI. */
-  methods: AuthMethod[];
-  /**
-   * Whether the node functions without any sign-in.
-   * false = a session must be established before activity is recorded.
-   */
+  methods:        AuthMethod[];
   allowAnonymous: boolean;
 }
 
