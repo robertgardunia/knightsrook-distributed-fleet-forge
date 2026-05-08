@@ -229,7 +229,21 @@ export default function StatsPanel({ node, isMock }: { node: FleetNode; isMock?:
   const [liveStats, setLiveStats] = useState<NodeStats | undefined>();
   const [muted,     setMuted]     = useState(true);
   const [emulating, setEmulating] = useState(false);
-  const canEmulate = !isMock && KIOSK_ROLES.has(node.role);
+  const emulatingRef = useRef(false);
+  const canEmulate   = !isMock && KIOSK_ROLES.has(node.role);
+
+  // Keep ref in sync so cleanup closures always see current value
+  useEffect(() => { emulatingRef.current = emulating; }, [emulating]);
+
+  // Release control on node change OR panel unmount (full-screen switch)
+  useEffect(() => {
+    return () => {
+      if (emulatingRef.current) {
+        socket.emit('kiosk:emulate:stop', { nodeId: node.id });
+        emulatingRef.current = false;
+      }
+    };
+  }, [node.id]);
 
   useEffect(() => {
     setMuted(true);
@@ -274,34 +288,40 @@ export default function StatsPanel({ node, isMock }: { node: FleetNode; isMock?:
             {t}
           </button>
         ))}
-        <span style={{ marginLeft: 'auto', paddingRight: 12, color: '#334155', fontSize: '0.62rem' }}>
-          {node.name}
-        </span>
+        <div style={{ marginLeft: 'auto', paddingRight: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+          {canEmulate && tab === 'screen' && (
+            <button
+              onClick={() => {
+                if (emulating) {
+                  socket.emit('kiosk:emulate:stop', { nodeId: node.id });
+                  setEmulating(false);
+                } else {
+                  setEmulating(true);
+                }
+              }}
+              style={{
+                background: 'transparent',
+                border: `1px solid ${emulating ? '#7f1d1d' : '#1e3a5f'}`,
+                color:  emulating ? '#f87171' : '#93c5fd',
+                padding: '2px 10px', borderRadius: 3,
+                fontSize: '0.6rem', letterSpacing: '0.12em',
+                textTransform: 'uppercase', cursor: 'pointer',
+              }}
+            >
+              {emulating ? 'Release' : 'Control'}
+            </button>
+          )}
+          <span style={{ color: '#334155', fontSize: '0.62rem' }}>{node.name}</span>
+        </div>
       </div>
 
-      <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+      <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
         {tab === 'stats' && <StatsView node={node} live={liveStats} />}
         {tab === 'screen' && !emulating && (
-          <>
-            <ScreenView node={node} isMock={isMock} muted={muted} onToggleMute={() => setMuted(m => !m)} />
-            {canEmulate && (
-              <button
-                onClick={() => { setEmulating(true); }}
-                style={{
-                  position: 'absolute', bottom: 40, left: '50%', transform: 'translateX(-50%)',
-                  background: 'rgba(2,12,27,0.9)', border: '1px solid #1e3a5f', color: '#93c5fd',
-                  padding: '5px 16px', borderRadius: 3, fontSize: '0.62rem',
-                  letterSpacing: '0.12em', textTransform: 'uppercase', cursor: 'pointer',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                Take Control
-              </button>
-            )}
-          </>
+          <ScreenView node={node} isMock={isMock} muted={muted} onToggleMute={() => setMuted(m => !m)} />
         )}
         {tab === 'screen' && emulating && (
-          <EmulatePanel node={node} onStop={() => setEmulating(false)} />
+          <EmulatePanel node={node} />
         )}
       </div>
     </div>

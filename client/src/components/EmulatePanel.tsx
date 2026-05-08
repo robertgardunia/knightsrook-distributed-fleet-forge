@@ -7,15 +7,14 @@ import type { FleetNode } from '../types/fleet';
 type Phase = 'idle' | 'waiting' | 'scanning' | 'active';
 
 interface Props {
-  node:     FleetNode;
-  onStop:   () => void;
+  node: FleetNode;
 }
 
 function generateTempId(): string {
   return 'temp:' + crypto.randomUUID().slice(0, 8).toUpperCase();
 }
 
-export default function EmulatePanel({ node, onStop }: Props) {
+export default function EmulatePanel({ node }: Props) {
   const [phase,      setPhase]      = useState<Phase>('idle');
   const [tempId,     setTempId]     = useState(() => generateTempId());
   const [qrDataUrl,  setQrDataUrl]  = useState<string>('');
@@ -94,17 +93,13 @@ export default function EmulatePanel({ node, onStop }: Props) {
     socket.emit('kiosk:scan', { nodeId: node.id, data });
   }
 
-  function stopCamera() {
-    cancelAnimationFrame(rafRef.current);
-    streamRef.current?.getTracks().forEach(t => t.stop());
-    streamRef.current = null;
-  }
-
-  function handleStop() {
-    stopCamera();
-    socket.emit('kiosk:emulate:stop', { nodeId: node.id });
-    onStop();
-  }
+  // Stop camera on unmount (StatsPanel owns the emulate:stop event)
+  useEffect(() => {
+    return () => {
+      cancelAnimationFrame(rafRef.current);
+      streamRef.current?.getTracks().forEach(t => t.stop());
+    };
+  }, []);
 
   function newUser() {
     const id = generateTempId();
@@ -120,29 +115,16 @@ export default function EmulatePanel({ node, onStop }: Props) {
       flex: 1, display: 'flex', flexDirection: 'column', background: '#020c1b',
       color: '#cbd5e1', fontFamily: 'monospace', fontSize: '0.68rem',
     }}>
-      {/* Header */}
+      {/* Status strip */}
       <div style={{
-        padding: '8px 12px', borderBottom: '1px solid #1e293b',
-        display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0,
+        padding: '6px 12px', borderBottom: '1px solid #1e293b', flexShrink: 0,
       }}>
-        <span style={{ color: phase === 'active' ? '#4ade80' : '#fb923c', letterSpacing: '0.1em', textTransform: 'uppercase', fontSize: '0.62rem' }}>
+        <span style={{ color: phase === 'active' ? '#4ade80' : '#fb923c', letterSpacing: '0.1em', textTransform: 'uppercase', fontSize: '0.6rem' }}>
           {phase === 'waiting' ? '● waiting for kiosk…'
             : phase === 'scanning' ? '● scan to sign in'
             : phase === 'active'   ? '● session active'
             : '● idle'}
         </span>
-        <button
-          onClick={handleStop}
-          style={{
-            marginLeft: 'auto', background: 'transparent',
-            border: '1px solid #7f1d1d', color: '#f87171',
-            padding: '2px 10px', borderRadius: 3,
-            fontSize: '0.6rem', letterSpacing: '0.1em', cursor: 'pointer',
-            textTransform: 'uppercase',
-          }}
-        >
-          Resume Auto
-        </button>
       </div>
 
       {/* Body */}
