@@ -13,11 +13,13 @@
  * all events (register/alerting/dead/recovered) to local SQLite — the Noble's
  * own record of its kiosks, independent of homebase connectivity.
  */
+import path from 'path';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import { io as ioClient } from 'socket.io-client';
 import { recordEvent, getHistory, getAllSince } from './telemetry.js';
-import { enqueue, flush, size, type XApiStatement } from './xapiQueue.js';
+import { FileQueue } from '@knightsrook/xapi/file-queue';
+import type { XApiStatement } from '@knightsrook/xapi';
 
 const AGENT_ID     = process.env.AGENT_ID!;
 const AGENT_NAME   = process.env.AGENT_NAME!;
@@ -59,8 +61,9 @@ setInterval(() => {
   }
 }, 5_000);
 
-// ── xAPI LRS gate ─────────────────────────────────────────────────────────────
+// ── xAPI queue + LRS gate ─────────────────────────────────────────────────────
 
+const queue = new FileQueue(path.resolve(process.cwd(), 'data', 'xapi-queue.jsonl'));
 let lrsEnabled = false;
 
 // ── Upstream: connect to homebase ─────────────────────────────────────────────
@@ -76,10 +79,10 @@ upstream.on('connect', () => {
     parentId: 'homebase',
   });
   if (lrsEnabled) {
-    const queued = size();
+    const queued = queue.size();
     if (queued > 0) {
       console.log(`[${AGENT_ID}] flushing ${queued} queued xAPI statements`);
-      flush((stmt) => upstream.emit('xapi:statement', stmt));
+      queue.flush((stmt) => upstream.emit('xapi:statement', stmt));
     }
   }
 });
@@ -92,7 +95,7 @@ setInterval(() => {
 }, HEARTBEAT_MS);
 
 setInterval(() => {
-  if (upstream.connected) upstream.emit('xapi:queue:size', { nodeId: AGENT_ID, queued: size() });
+  if (upstream.connected) upstream.emit('xapi:queue:size', { nodeId: AGENT_ID, queued: queue.size() });
 }, 5_000);
 
 // ── Downstream: relay server for kiosks ──────────────────────────────────────
@@ -164,7 +167,7 @@ downstream.on('connection', (socket) => {
     if (upstream.connected && lrsEnabled) {
       upstream.emit('xapi:statement', stmt);
     } else {
-      enqueue(stmt);
+      queue.push(stmt);
     }
   });
 
@@ -181,10 +184,10 @@ upstream.on('xapi:lrs:set', ({ enabled }: { enabled: boolean }) => {
   lrsEnabled = enabled;
   console.log(`[${AGENT_ID}] xAPI LRS ${enabled ? 'enabled' : 'disabled'}`);
   if (enabled && upstream.connected) {
-    const queued = size();
+    const queued = queue.size();
     if (queued > 0) {
       console.log(`[${AGENT_ID}] flushing ${queued} queued xAPI statements`);
-      flush((stmt) => upstream.emit('xapi:statement', stmt));
+      queue.flush((stmt) => upstream.emit('xapi:statement', stmt));
     }
   }
   downstream.emit('xapi:lrs:set', { enabled });

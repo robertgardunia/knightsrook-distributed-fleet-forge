@@ -1,4 +1,5 @@
 import { io } from 'socket.io-client';
+import { buildStatement, MemQueue, ACTIVITY_BASE } from '@knightsrook/xapi';
 
 const AGENT_ID     = process.env.AGENT_ID!;
 const AGENT_NAME   = process.env.AGENT_NAME!;
@@ -18,7 +19,7 @@ socket.on('connect', () => {
   console.log(`[${AGENT_ID}] connected to homebase`);
   socket.emit('agent:register', { id: AGENT_ID, name: AGENT_NAME, role: AGENT_ROLE, parentId: AGENT_PARENT });
   if (lrsEnabled) {
-    while (xapiQueue.length > 0) socket.emit('xapi:statement', xapiQueue.shift()!);
+    xapiQueue.flush(s => socket.emit('xapi:statement', s));
   }
 });
 
@@ -34,35 +35,9 @@ setInterval(() => {
   if (socket.connected) socket.emit('agent:heartbeat', { id: AGENT_ID });
 }, HEARTBEAT_MS);
 
-// ── xAPI statement builder ───────────────────────────────────────────────────
+// ── xAPI queue ───────────────────────────────────────────────────────────────
 
-const FLEET_ORIGIN  = 'https://fleet.teamsteamnation.org';
-const ACTIVITY_BASE = 'https://teamsteamnation.org/activities';
-
-const VERBS: Record<string, { id: string; display: string }> = {
-  initialized: { id: 'http://adlnet.gov/expapi/verbs/initialized', display: 'Initialized' },
-  launched:    { id: 'http://adlnet.gov/expapi/verbs/launched',    display: 'Launched'    },
-  progressed:  { id: 'http://adlnet.gov/expapi/verbs/progressed',  display: 'Progressed'  },
-  completed:   { id: 'http://adlnet.gov/expapi/verbs/completed',   display: 'Completed'   },
-  exited:      { id: 'http://adlnet.gov/expapi/verbs/exited',      display: 'Exited'      },
-};
-
-interface XApiStatement {
-  id:        string;
-  actor:     { objectType: 'Agent'; name: string; mbox: string };
-  authority: { objectType: 'Agent'; name: string; mbox: string };
-  verb:      { id: string; display: { 'en-US': string } };
-  object:    { objectType: 'Activity'; id: string; definition: { name: { 'en-US': string } } };
-  timestamp: string;
-  context:   { platform: string; extensions: Record<string, unknown> };
-}
-
-const xapiQueue: XApiStatement[] = [];
-
-function toMbox(id: string): string {
-  if (id.includes('@')) return id.startsWith('mailto:') ? id : `mailto:${id}`;
-  return `mailto:${id.toLowerCase().replace(/[^a-z0-9._+-]/g, '-')}@teamsteamnation.org`;
-}
+const xapiQueue = new MemQueue();
 
 function xapi(
   actorName: string,
@@ -73,24 +48,7 @@ function xapi(
   ext:       Record<string, unknown> = {},
 ): void {
   if (!emulating) return;
-  const verb = VERBS[verbKey] ?? { id: `${FLEET_ORIGIN}/verbs/${verbKey}`, display: verbKey };
-  const mbox = toMbox(actorId);
-  const stmt: XApiStatement = {
-    id:        crypto.randomUUID(),
-    actor:     { objectType: 'Agent', name: actorName, mbox },
-    authority: { objectType: 'Agent', name: 'KnightsRook Fleet', mbox },
-    verb:      { id: verb.id, display: { 'en-US': verb.display } },
-    object:    { objectType: 'Activity', id: objectId, definition: { name: { 'en-US': label } } },
-    timestamp: new Date().toISOString(),
-    context: {
-      platform: 'KnightsRook Fleet',
-      extensions: {
-        [`${FLEET_ORIGIN}/ext/nodeId`]:  AGENT_ID,
-        [`${FLEET_ORIGIN}/ext/station`]: AGENT_ID.split('-')[0],
-        ...ext,
-      },
-    },
-  };
+  const stmt = buildStatement({ actorName, actorId, verbKey, objectId, label, nodeId: AGENT_ID, ext });
   if (socket.connected && lrsEnabled) {
     socket.emit('xapi:statement', stmt);
   } else {
@@ -106,15 +64,15 @@ let lrsEnabled = false;
 socket.on('xapi:lrs:set', ({ enabled }: { enabled: boolean }) => {
   lrsEnabled = enabled;
   console.log(`[${AGENT_ID}] xAPI LRS ${enabled ? 'enabled' : 'disabled'}`);
-  if (enabled && socket.connected && xapiQueue.length > 0) {
-    console.log(`[${AGENT_ID}] flushing ${xapiQueue.length} queued xAPI statements`);
-    while (xapiQueue.length > 0) socket.emit('xapi:statement', xapiQueue.shift()!);
+  if (enabled && socket.connected && xapiQueue.size() > 0) {
+    console.log(`[${AGENT_ID}] flushing ${xapiQueue.size()} queued xAPI statements`);
+    xapiQueue.flush(s => socket.emit('xapi:statement', s));
   }
   reportQueueSize();
 });
 
 function reportQueueSize() {
-  if (socket.connected) socket.emit('xapi:queue:size', { nodeId: AGENT_ID, queued: xapiQueue.length });
+  if (socket.connected) socket.emit('xapi:queue:size', { nodeId: AGENT_ID, queued: xapiQueue.size() });
 }
 
 setInterval(reportQueueSize, 5_000);

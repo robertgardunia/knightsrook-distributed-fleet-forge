@@ -5,7 +5,11 @@
     "moduleResolution": "bundler",
     "outDir": "dist",
     "strict": true,
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "paths": {
+      "@knightsrook/xapi": ["../../packages/xapi/src/index.ts"],
+      "@knightsrook/xapi/*": ["../../packages/xapi/src/*.ts"]
+    }
   },
   "include": ["agent.ts"]
 }

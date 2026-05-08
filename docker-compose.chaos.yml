@@ -42,7 +42,9 @@ services:
   # ── Station S1 ────────────────────────────────────────────────────────────
   s1-controller:
     container_name: s1-controller
-    build: ./containers/station-controller
+    build:
+      context: .
+      dockerfile: containers/station-controller/Dockerfile
     environment:
       AGENT_ID: s1-controller
       AGENT_NAME: S1
@@ -56,7 +58,9 @@ services:
 
   s1-game-1:
     container_name: s1-game-1
-    build: ./containers/game-kiosk
+    build:
+      context: .
+      dockerfile: containers/game-kiosk/Dockerfile
     environment: { AGENT_ID: s1-game-1, AGENT_NAME: KG1, AGENT_ROLE: game-kiosk, AGENT_PARENT: s1-controller, HOMEBASE_URL: "http://s1-controller:5021"  }
     ports: ["18101:8080"]
     networks: [station-s1-net]
@@ -65,7 +69,9 @@ services:
 
   s1-game-2:
     container_name: s1-game-2
-    build: ./containers/game-kiosk
+    build:
+      context: .
+      dockerfile: containers/game-kiosk/Dockerfile
     environment: { AGENT_ID: s1-game-2, AGENT_NAME: KG2, AGENT_ROLE: game-kiosk, AGENT_PARENT: s1-controller, HOMEBASE_URL: "http://s1-controller:5021"  }
     ports: ["18102:8080"]
     networks: [station-s1-net]
@@ -74,7 +80,9 @@ services:
 
   s1-game-3:
     container_name: s1-game-3
-    build: ./containers/game-kiosk
+    build:
+      context: .
+      dockerfile: containers/game-kiosk/Dockerfile
     environment: { AGENT_ID: s1-game-3, AGENT_NAME: KG3, AGENT_ROLE: game-kiosk, AGENT_PARENT: s1-controller, HOMEBASE_URL: "http://s1-controller:5021"  }
     ports: ["18103:8080"]
     networks: [station-s1-net]
@@ -83,7 +91,9 @@ services:
 
   s1-game-4:
     container_name: s1-game-4
-    build: ./containers/game-kiosk
+    build:
+      context: .
+      dockerfile: containers/game-kiosk/Dockerfile
     environment: { AGENT_ID: s1-game-4, AGENT_NAME: KG4, AGENT_ROLE: game-kiosk, AGENT_PARENT: s1-controller, HOMEBASE_URL: "http://s1-controller:5021"  }
     ports: ["18104:8080"]
     networks: [station-s1-net]
@@ -115,7 +125,9 @@ services:
   # ── Station S2 ────────────────────────────────────────────────────────────
   s2-controller:
     container_name: s2-controller
-    build: ./containers/station-controller
+    build:
+      context: .
+      dockerfile: containers/station-controller/Dockerfile
     environment:
       AGENT_ID: s2-controller
       AGENT_NAME: S2
@@ -129,7 +141,9 @@ services:
 
   s2-game-1:
     container_name: s2-game-1
-    build: ./containers/game-kiosk
+    build:
+      context: .
+      dockerfile: containers/game-kiosk/Dockerfile
     environment: { AGENT_ID: s2-game-1, AGENT_NAME: KG1, AGENT_ROLE: game-kiosk, AGENT_PARENT: s2-controller, HOMEBASE_URL: "http://s2-controller:5021"  }
     ports: ["18201:8080"]
     networks: [station-s2-net]
@@ -138,7 +152,9 @@ services:
 
   s2-game-2:
     container_name: s2-game-2
-    build: ./containers/game-kiosk
+    build:
+      context: .
+      dockerfile: containers/game-kiosk/Dockerfile
     environment: { AGENT_ID: s2-game-2, AGENT_NAME: KG2, AGENT_ROLE: game-kiosk, AGENT_PARENT: s2-controller, HOMEBASE_URL: "http://s2-controller:5021"  }
     ports: ["18202:8080"]
     networks: [station-s2-net]
@@ -147,7 +163,9 @@ services:
 
   s2-game-3:
     container_name: s2-game-3
-    build: ./containers/game-kiosk
+    build:
+      context: .
+      dockerfile: containers/game-kiosk/Dockerfile
     environment: { AGENT_ID: s2-game-3, AGENT_NAME: KG3, AGENT_ROLE: game-kiosk, AGENT_PARENT: s2-controller, HOMEBASE_URL: "http://s2-controller:5021"  }
     ports: ["18203:8080"]
     networks: [station-s2-net]
@@ -156,7 +174,9 @@ services:
 
   s2-game-4:
     container_name: s2-game-4
-    build: ./containers/game-kiosk
+    build:
+      context: .
+      dockerfile: containers/game-kiosk/Dockerfile
     environment: { AGENT_ID: s2-game-4, AGENT_NAME: KG4, AGENT_ROLE: game-kiosk, AGENT_PARENT: s2-controller, HOMEBASE_URL: "http://s2-controller:5021"  }
     ports: ["18204:8080"]
     networks: [station-s2-net]
@@ -188,7 +208,9 @@ services:
   # ── Station S3 ────────────────────────────────────────────────────────────
   s3-controller:
     container_name: s3-controller
-    build: ./containers/station-controller
+    build:
+      context: .
+      dockerfile: containers/station-controller/Dockerfile
     environment:
       AGENT_ID: s3-controller
       AGENT_NAME: S3
@@ -202,7 +224,9 @@ services:
 
   s3-game-1:
     container_name: s3-game-1
-    build: ./containers/game-kiosk
+    build:
+      context: .
+      dockerfile: containers/game-kiosk/Dockerfile
     environment: { AGENT_ID: s3-game-1, AGENT_NAME: KG1, AGENT_ROLE: game-kiosk, AGENT_PARENT: s3-controller, HOMEBASE_URL: "http://s3-controller:5021"  }
     ports: ["18301:8080"]
     networks: [station-s3-net]
@@ -211,7 +235,9 @@ services:
 
   s3-game-2:
     container_name: s3-game-2
-    build: ./containers/game-kiosk
+    build:
+      context: .
+      dockerfile: containers/game-kiosk/Dockerfile
     environment: { AGENT_ID: s3-game-2, AGENT_NAME: KG2, AGENT_ROLE: game-kiosk, AGENT_PARENT: s3-controller, HOMEBASE_URL: "http://s3-controller:5021"  }
     ports: ["18302:8080"]
     networks: [station-s3-net]
@@ -220,7 +246,9 @@ services:
 
   s3-game-3:
     container_name: s3-game-3
-    build: ./containers/game-kiosk
+    build:
+      context: .
+      dockerfile: containers/game-kiosk/Dockerfile
     environment: { AGENT_ID: s3-game-3, AGENT_NAME: KG3, AGENT_ROLE: game-kiosk, AGENT_PARENT: s3-controller, HOMEBASE_URL: "http://s3-controller:5021"  }
     ports: ["18303:8080"]
     networks: [station-s3-net]
@@ -229,7 +257,9 @@ services:
 
   s3-game-4:
     container_name: s3-game-4
-    build: ./containers/game-kiosk
+    build:
+      context: .
+      dockerfile: containers/game-kiosk/Dockerfile
     environment: { AGENT_ID: s3-game-4, AGENT_NAME: KG4, AGENT_ROLE: game-kiosk, AGENT_PARENT: s3-controller, HOMEBASE_URL: "http://s3-controller:5021"  }
     ports: ["18304:8080"]
     networks: [station-s3-net]
@@ -261,7 +291,9 @@ services:
   # ── Station S4 ────────────────────────────────────────────────────────────
   s4-controller:
     container_name: s4-controller
-    build: ./containers/station-controller
+    build:
+      context: .
+      dockerfile: containers/station-controller/Dockerfile
     environment:
       AGENT_ID: s4-controller
       AGENT_NAME: S4
@@ -275,7 +307,9 @@ services:
 
   s4-game-1:
     container_name: s4-game-1
-    build: ./containers/game-kiosk
+    build:
+      context: .
+      dockerfile: containers/game-kiosk/Dockerfile
     environment: { AGENT_ID: s4-game-1, AGENT_NAME: KG1, AGENT_ROLE: game-kiosk, AGENT_PARENT: s4-controller, HOMEBASE_URL: "http://s4-controller:5021"  }
     ports: ["18401:8080"]
     networks: [station-s4-net]
@@ -284,7 +318,9 @@ services:
 
   s4-game-2:
     container_name: s4-game-2
-    build: ./containers/game-kiosk
+    build:
+      context: .
+      dockerfile: containers/game-kiosk/Dockerfile
     environment: { AGENT_ID: s4-game-2, AGENT_NAME: KG2, AGENT_ROLE: game-kiosk, AGENT_PARENT: s4-controller, HOMEBASE_URL: "http://s4-controller:5021"  }
     ports: ["18402:8080"]
     networks: [station-s4-net]
@@ -293,7 +329,9 @@ services:
 
   s4-game-3:
     container_name: s4-game-3
-    build: ./containers/game-kiosk
+    build:
+      context: .
+      dockerfile: containers/game-kiosk/Dockerfile
     environment: { AGENT_ID: s4-game-3, AGENT_NAME: KG3, AGENT_ROLE: game-kiosk, AGENT_PARENT: s4-controller, HOMEBASE_URL: "http://s4-controller:5021"  }
     ports: ["18403:8080"]
     networks: [station-s4-net]
@@ -302,7 +340,9 @@ services:
 
   s4-game-4:
     container_name: s4-game-4
-    build: ./containers/game-kiosk
+    build:
+      context: .
+      dockerfile: containers/game-kiosk/Dockerfile
     environment: { AGENT_ID: s4-game-4, AGENT_NAME: KG4, AGENT_ROLE: game-kiosk, AGENT_PARENT: s4-controller, HOMEBASE_URL: "http://s4-controller:5021"  }
     ports: ["18404:8080"]
     networks: [station-s4-net]

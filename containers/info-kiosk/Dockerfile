@@ -1,11 +1,27 @@
-# Stage 1 — compile the fleet agent
-FROM node:20-alpine AS agent-build
-WORKDIR /build
-COPY containers/fleet-agent/package.json containers/fleet-agent/tsconfig.json ./
-COPY containers/info-kiosk/agent.ts ./agent.ts
-RUN npm install && npm run build
+# ── compile @knightsrook/xapi ────────────────────────────────────────────────
+FROM node:20-alpine AS xapi-build
+WORKDIR /repo/packages/xapi
+COPY packages/xapi/package.json .
+RUN npm install
+COPY packages/xapi/tsconfig.json .
+COPY packages/xapi/src/ ./src/
+RUN npm run build
 
-# Stage 2 — runtime: nginx + Chromium (runs the slideshow) + Node agent
+# ── compile the fleet agent ──────────────────────────────────────────────────
+FROM node:20-alpine AS agent-build
+WORKDIR /repo/containers/fleet-agent
+COPY containers/fleet-agent/package.json .
+RUN npm install
+RUN mkdir -p node_modules/@knightsrook/xapi
+COPY --from=xapi-build /repo/packages/xapi/dist/ node_modules/@knightsrook/xapi/dist/
+RUN echo '{"name":"@knightsrook/xapi","version":"0.1.0","type":"module","exports":{".":{"import":"./dist/index.js","types":"./dist/index.d.ts"},"./file-queue":{"import":"./dist/fileQueue.js","types":"./dist/fileQueue.d.ts"},"./lrs-client":{"import":"./dist/lrsClient.js","types":"./dist/lrsClient.d.ts"}}}' \
+    > node_modules/@knightsrook/xapi/package.json
+COPY packages/xapi/src/ /repo/packages/xapi/src/
+COPY containers/fleet-agent/tsconfig.json .
+COPY containers/info-kiosk/agent.ts ./agent.ts
+RUN npm run build
+
+# ── runtime: nginx + Chromium (runs the slideshow) + Node agent ──────────────
 FROM node:20-alpine
 RUN apk add --no-cache \
     nginx \
@@ -21,7 +37,6 @@ RUN mkdir -p /usr/share/nginx/html/slides
 COPY containers/info-kiosk/slideshow.html /usr/share/nginx/html/slideshow.html
 
 # Slide images — copied from project root at build time
-# (docker-compose uses context: . so paths are relative to project root)
 COPY client/public/games/info-build-racer.png /usr/share/nginx/html/slides/
 COPY client/public/games/info-controls.png    /usr/share/nginx/html/slides/
 COPY client/public/games/info-cornering.png   /usr/share/nginx/html/slides/
@@ -34,7 +49,11 @@ COPY containers/info-kiosk/nginx.conf /etc/nginx/http.d/default.conf
 WORKDIR /agent
 COPY containers/fleet-agent/package.json ./
 RUN npm install --omit=dev
-COPY --from=agent-build /build/dist ./dist
+RUN mkdir -p node_modules/@knightsrook/xapi
+COPY --from=xapi-build /repo/packages/xapi/dist/ node_modules/@knightsrook/xapi/dist/
+RUN echo '{"name":"@knightsrook/xapi","version":"0.1.0","type":"module","exports":{".":{"import":"./dist/index.js","types":"./dist/index.d.ts"},"./file-queue":{"import":"./dist/fileQueue.js","types":"./dist/fileQueue.d.ts"},"./lrs-client":{"import":"./dist/lrsClient.js","types":"./dist/lrsClient.d.ts"}}}' \
+    > node_modules/@knightsrook/xapi/package.json
+COPY --from=agent-build /repo/containers/fleet-agent/dist ./dist
 
 COPY containers/info-kiosk/start.sh /start.sh
 RUN chmod +x /start.sh

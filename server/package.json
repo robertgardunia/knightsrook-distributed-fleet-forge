@@ -9,6 +9,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@knightsrook/xapi": "workspace:*",
     "@anthropic-ai/sdk": "^0.52.0",
     "@types/dockerode": "^4.0.1",
     "cors": "^2.8.5",

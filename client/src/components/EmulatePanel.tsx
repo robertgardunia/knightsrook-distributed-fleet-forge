@@ -3,7 +3,7 @@ import jsQR from 'jsqr';
 import QRCode from 'qrcode';
 import { socket } from '../socket';
 import type { FleetNode } from '../types/fleet';
-import { getAuthConfig, type AuthMethod } from '../config/authPaths';
+import { getAuthConfig, type AuthMethod } from '@knightsrook/xapi';
 
 type Phase = 'idle' | 'waiting' | 'scanning' | 'active';
 type SignInMethod = AuthMethod | null;

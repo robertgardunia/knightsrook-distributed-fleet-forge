@@ -1,0 +1,19 @@
+{
+  "name": "@knightsrook/xapi",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc"
+  },
+  "description": "xAPI relay tier — queue, flush, validate, LRS client. Same component at every fleet tier; config determines behaviour.",
+  "exports": {
+    ".": "./src/index.ts",
+    "./file-queue": "./src/fileQueue.ts",
+    "./lrs-client": "./src/lrsClient.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.40",
+    "typescript": "^5.9.3"
+  }
+}

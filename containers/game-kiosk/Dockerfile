@@ -1,10 +1,26 @@
-# Stage 1 — compile the fleet agent
-FROM node:20-alpine AS agent-build
-WORKDIR /build
-COPY package.json tsconfig.json agent.ts ./
-RUN npm install && npm run build
+# ── compile @knightsrook/xapi ────────────────────────────────────────────────
+FROM node:20-alpine AS xapi-build
+WORKDIR /repo/packages/xapi
+COPY packages/xapi/package.json .
+RUN npm install
+COPY packages/xapi/tsconfig.json .
+COPY packages/xapi/src/ ./src/
+RUN npm run build
 
-# Stage 2 — runtime: nginx + Chromium (runs the game) + Node agent + HexGL
+# ── compile the fleet agent ──────────────────────────────────────────────────
+FROM node:20-alpine AS agent-build
+WORKDIR /repo/containers/game-kiosk
+COPY containers/game-kiosk/package.json .
+RUN npm install
+RUN mkdir -p node_modules/@knightsrook/xapi
+COPY --from=xapi-build /repo/packages/xapi/dist/ node_modules/@knightsrook/xapi/dist/
+RUN echo '{"name":"@knightsrook/xapi","version":"0.1.0","type":"module","exports":{".":{"import":"./dist/index.js","types":"./dist/index.d.ts"},"./file-queue":{"import":"./dist/fileQueue.js","types":"./dist/fileQueue.d.ts"},"./lrs-client":{"import":"./dist/lrsClient.js","types":"./dist/lrsClient.d.ts"}}}' \
+    > node_modules/@knightsrook/xapi/package.json
+COPY packages/xapi/src/ /repo/packages/xapi/src/
+COPY containers/game-kiosk/tsconfig.json containers/game-kiosk/agent.ts ./
+RUN npm run build
+
+# ── runtime: nginx + Chromium (runs the game) + Node agent + HexGL ──────────
 FROM node:20-alpine
 RUN apk add --no-cache \
     nginx \
@@ -22,23 +38,27 @@ RUN git clone --depth 1 https://github.com/BKcore/HexGL.git /tmp/hexgl \
  && rm -rf /tmp/hexgl
 
 # Inject attract.js and title.html
-COPY attract.js /usr/share/nginx/html/attract.js
-COPY title.html /usr/share/nginx/html/title.html
+COPY containers/game-kiosk/attract.js /usr/share/nginx/html/attract.js
+COPY containers/game-kiosk/title.html /usr/share/nginx/html/title.html
 
 # Patch HexGL's index.html to load attract.js before </body>
 RUN sed -i 's|</body>|<script src="/attract.js"></script></body>|' \
     /usr/share/nginx/html/index.html
 
 # Nginx config
-COPY nginx.conf /etc/nginx/http.d/default.conf
+COPY containers/game-kiosk/nginx.conf /etc/nginx/http.d/default.conf
 
 # Fleet agent
 WORKDIR /agent
-COPY package.json ./
+COPY containers/game-kiosk/package.json ./
 RUN npm install --omit=dev
-COPY --from=agent-build /build/dist ./dist
+RUN mkdir -p node_modules/@knightsrook/xapi
+COPY --from=xapi-build /repo/packages/xapi/dist/ node_modules/@knightsrook/xapi/dist/
+RUN echo '{"name":"@knightsrook/xapi","version":"0.1.0","type":"module","exports":{".":{"import":"./dist/index.js","types":"./dist/index.d.ts"},"./file-queue":{"import":"./dist/fileQueue.js","types":"./dist/fileQueue.d.ts"},"./lrs-client":{"import":"./dist/lrsClient.js","types":"./dist/lrsClient.d.ts"}}}' \
+    > node_modules/@knightsrook/xapi/package.json
+COPY --from=agent-build /repo/containers/game-kiosk/dist ./dist
 
-COPY start.sh /start.sh
+COPY containers/game-kiosk/start.sh /start.sh
 RUN chmod +x /start.sh
 
 EXPOSE 8080

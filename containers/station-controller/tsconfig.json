@@ -6,7 +6,12 @@
     "outDir": "dist",
     "strict": true,
     "esModuleInterop": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "paths": {
+      "@knightsrook/xapi": ["../../packages/xapi/src/index.ts"],
+      "@knightsrook/xapi/file-queue": ["../../packages/xapi/src/fileQueue.ts"],
+      "@knightsrook/xapi/lrs-client": ["../../packages/xapi/src/lrsClient.ts"]
+    }
   },
   "include": ["relay.ts", "telemetry.ts"]
 }
