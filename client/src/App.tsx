@@ -109,6 +109,7 @@ export default function App() {
   const [labConnected, setLabConnected] = useState(false);
   const [chaosFiring, setChaosFiring] = useState(false);
   const [activityKey, setActivityKey] = useState(0);
+  const [xapiStatus, setXapiStatus] = useState<{ enabled: boolean; queued: number } | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
   const fgHandle = useRef<FleetGraphHandle>(null);
@@ -178,13 +179,19 @@ export default function App() {
 
   useEffect(() => {
     const onConnect    = () => setLabConnected(labModeRef.current === 'lab');
-    const onDisconnect = () => setLabConnected(false);
+    const onDisconnect = () => { setLabConnected(false); setXapiStatus(null); };
     socket.on('connect',    onConnect);
     socket.on('disconnect', onDisconnect);
     return () => {
       socket.off('connect',    onConnect);
       socket.off('disconnect', onDisconnect);
     };
+  }, []);
+
+  useEffect(() => {
+    const onStatus = (s: { enabled: boolean; queued: number }) => setXapiStatus(s);
+    socket.on('xapi:lrs:status', onStatus);
+    return () => { socket.off('xapi:lrs:status', onStatus); };
   }, []);
 
   // On mode change: reconnect socket to the right server, clear stale graph.
@@ -331,6 +338,36 @@ export default function App() {
               </button>
             ))}
           </div>
+
+          {/* xAPI LRS toggle — only when lab socket is live */}
+          {labConnected && xapiStatus && (
+            <button
+              onClick={() => socket.emit('xapi:lrs:set', { enabled: !xapiStatus.enabled })}
+              title={xapiStatus.enabled ? 'Disable LRS posting' : 'Enable LRS posting'}
+              style={{
+                background: xapiStatus.enabled ? '#052e16' : '#1e293b',
+                border: `1px solid ${xapiStatus.enabled ? '#14532d' : '#334155'}`,
+                color:  xapiStatus.enabled ? '#4ade80' : '#475569',
+                padding: '3px 9px', fontSize: '0.62rem',
+                cursor: 'pointer', borderRadius: 2,
+                letterSpacing: '0.08em', textTransform: 'uppercase',
+                transition: 'all 0.15s ease',
+                display: 'flex', alignItems: 'center', gap: 5,
+              }}
+            >
+              <span style={{ fontSize: '0.55rem' }}>{xapiStatus.enabled ? '●' : '■'}</span>
+              xAPI
+              {xapiStatus.queued > 0 && (
+                <span style={{
+                  background: xapiStatus.enabled ? '#14532d' : '#1e293b',
+                  color: xapiStatus.enabled ? '#86efac' : '#64748b',
+                  borderRadius: 2, padding: '0 4px', fontSize: '0.58rem',
+                }}>
+                  {xapiStatus.queued}
+                </span>
+              )}
+            </button>
+          )}
 
           {/* Trigger chaos — only when lab socket is live */}
           {labConnected && !isForging && (

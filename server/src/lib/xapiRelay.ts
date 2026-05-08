@@ -6,7 +6,17 @@ const LL_KEY      = process.env.LL_KEY;
 const LL_SECRET   = process.env.LL_SECRET;
 
 const QUEUE_PATH = path.resolve(process.cwd(), 'data', 'xapi-queue.jsonl');
-const RETRY_MS   = 30_000;
+
+let lrsEnabled = false;
+
+export function setLrsEnabled(val: boolean): void {
+  lrsEnabled = val;
+  console.log(`[xapiRelay] LRS posting ${val ? 'ENABLED' : 'DISABLED'}`);
+}
+
+export function getLrsStatus(): { enabled: boolean; queued: number } {
+  return { enabled: lrsEnabled, queued: queueSize() };
+}
 
 function basicAuth(): string {
   return 'Basic ' + Buffer.from(`${LL_KEY}:${LL_SECRET}`).toString('base64');
@@ -14,7 +24,7 @@ function basicAuth(): string {
 
 async function postToLrs(statements: unknown[]): Promise<boolean> {
   if (!LL_ENDPOINT || !LL_KEY || !LL_SECRET) {
-    console.warn('[xapiRelay] LL_ENDPOINT/KEY/SECRET not configured — statement dropped');
+    console.warn('[xapiRelay] LL_ENDPOINT/KEY/SECRET not configured — queuing');
     return false;
   }
   try {
@@ -49,7 +59,14 @@ function enqueue(stmt: unknown): void {
   }
 }
 
-async function flushQueue(): Promise<void> {
+function queueSize(): number {
+  try {
+    return readFileSync(QUEUE_PATH, 'utf8').split('\n').filter(l => l.trim()).length;
+  } catch { return 0; }
+}
+
+export async function flushQueue(): Promise<void> {
+  if (!lrsEnabled) return;
   let contents: string;
   try { contents = readFileSync(QUEUE_PATH, 'utf8'); } catch { return; }
 
@@ -65,10 +82,10 @@ async function flushQueue(): Promise<void> {
 }
 
 export async function relay(stmt: unknown): Promise<void> {
+  if (!lrsEnabled) {
+    enqueue(stmt);
+    return;
+  }
   const ok = await postToLrs([stmt]);
   if (!ok) enqueue(stmt);
 }
-
-// Retry queued statements on a background interval
-setInterval(() => { flushQueue().catch(console.error); }, RETRY_MS);
-setTimeout(()  => { flushQueue().catch(console.error); }, 5_000);

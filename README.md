@@ -25,6 +25,13 @@ Distributed Fleet Forge: A containerized chaos lab where sovereign-tier kiosk fl
 | `node:stats:unsubscribe` | client → server | Stop stats stream |
 | `node:stats:data` | server → client | Stats snapshot (cpu, mem, net rates, uptime, process list) |
 | `node:stats:error` | server → client | Stats stream error (e.g. Docker unavailable) |
+| `xapi:statement` | agent/controller → homebase | xAPI statement relayed up the cascade; homebase queues or posts to LRS |
+| `xapi:lrs:set` | client → server | `{ enabled: boolean }` — toggle LRS posting on/off; triggers immediate queue flush when enabled |
+| `xapi:lrs:status` | server → client | `{ enabled: boolean; queued: number }` — current LRS toggle state and homebase queue depth; sent on connect + on every toggle + every 30s |
+| `kiosk:emulate:start` | client → homebase → controller → kiosk | Pause kiosk auto-sim and hand control to dashboard |
+| `kiosk:emulate:stop` | client → homebase → controller → kiosk | Resume kiosk auto-sim |
+| `kiosk:emulate:ready` | kiosk → controller → homebase → client | Kiosk confirms it paused and is ready for a scan |
+| `kiosk:scan` | client → homebase → controller → kiosk | Scanned identity string; kiosk signs in that actor and begins an xAPI session |
 
 ## Telemetry API
 
@@ -84,7 +91,9 @@ Three fixed overlays provide real-time narrative visibility during Online Lab mo
 | **Fireman panel** | Bottom-right | Incidents grouped by ID: fault type → action steps → outcome. Escalations shown in red with ACK button. |
 | **Playbook panel** | Bottom-left | Accumulated fault patterns with success rate bar (green ≥80%, yellow ≥50%, red below). Refreshes every 10s. Hidden until first incident resolves. |
 
-**Take Control / Emulate User** — Screen tab on any kiosk node (Online Lab only) shows a "Take Control" button. Clicking it pauses the kiosk's auto-simulation, opens the host camera via `getUserMedia`, and generates a temp-ID QR code. Scan the QR with any device (or the system camera aimed at the screen), or press "Skip" to use the ID directly. The kiosk agent receives the scanned identity via `kiosk:scan`, starts a real xAPI session under that actor, and all subsequent events flow through the pipeline to Learning Locker. "Resume Auto" hands control back to the simulation. Relay chain: dashboard → homebase broadcast → station controller (filters by kiosk ID) → kiosk agent.
+**Take Control / Emulate User** — Screen tab on any kiosk node (Online Lab only) shows a "Control" button. Clicking it pauses the kiosk's auto-simulation, opens the host camera via `getUserMedia`, and generates a temp-ID QR code. Scan the QR with any device (or the system camera aimed at the screen), or press "Skip" to use the ID directly. The kiosk agent receives the scanned identity via `kiosk:scan`, starts a real xAPI session under that actor, and all subsequent events flow through the cascade pipeline. "Release" hands control back to the simulation. Relay chain: dashboard → homebase broadcast → station controller (filters by kiosk ID) → kiosk agent. xAPI statements are generated only during emulate mode (not during auto-sim).
+
+**xAPI LRS toggle** — A compact toggle appears in the header whenever Online Lab is connected. Default is OFF; the homebase queue accumulates all incoming statements. Flip it ON to flush the queue and begin streaming statements to Learning Locker. The badge shows the current queue depth. This is the intentional demo path: show the queue building locally at each tier, then enable the LRS stream and watch it drain. Each tier (kiosk in-memory, station controller JSONL on disk, homebase JSONL on disk) queues independently and flushes upstream on reconnect — the LRS toggle only gates the final homebase → LRS hop.
 
 Links degrade visually with their target node: alerting → orange slow particles, dead → red crawling particles. Repeated incidents accumulate stress on a node's links: first repeat → amber particles (0.0008 speed), second repeat → orange-red particles (0.0004 speed), persisting even while the node is recovered — the graph shows which nodes have had a rough session. Stress clears on mode switch. Node animations on the force graph:
 - **Red shockwave** — two rings expanding outward from the node when chaos agent targets it

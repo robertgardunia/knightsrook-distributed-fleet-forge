@@ -8,7 +8,7 @@ import { streamLogs, openShell, type ShellHandle, streamStats, type NodeStats } 
 import { recordStats, recordEvent } from './lib/telemetry.js';
 import { Dispatcher } from './lib/dispatcher.js';
 import { setEmit } from './routes/index.js';
-import { relay as relayXapi } from './lib/xapiRelay.js';
+import { relay as relayXapi, setLrsEnabled, getLrsStatus, flushQueue } from './lib/xapiRelay.js';
 
 const PORT     = Number(process.env.PORT) || 5020;
 const USE_MOCK = process.env.USE_MOCK === 'true';
@@ -60,6 +60,14 @@ io.on('connection', (socket) => {
 
   // ── xAPI relay — receive from station controllers, POST to Learning Locker ──
   socket.on('xapi:statement', (stmt: unknown) => { relayXapi(stmt).catch(console.error); });
+
+  // ── xAPI LRS toggle ────────────────────────────────────────────────────────
+  socket.emit('xapi:lrs:status', getLrsStatus());
+  socket.on('xapi:lrs:set', ({ enabled }: { enabled: boolean }) => {
+    setLrsEnabled(enabled);
+    if (enabled) flushQueue().catch(console.error);
+    io.emit('xapi:lrs:status', getLrsStatus());
+  });
 
   // ── Kiosk emulation — relay control events through the fleet ─────────────
   socket.on('kiosk:emulate:start', (data: unknown) => io.emit('kiosk:emulate:start', data));
@@ -144,6 +152,12 @@ io.on('connection', (socket) => {
     shells.clear();
   });
 });
+
+// Retry LRS + broadcast queue status every 30s
+setInterval(() => {
+  flushQueue().catch(console.error);
+  io.emit('xapi:lrs:status', getLrsStatus());
+}, 30_000);
 
 process.on('unhandledRejection', (reason) => {
   console.error('[HOMEBASE] unhandledRejection:', reason);

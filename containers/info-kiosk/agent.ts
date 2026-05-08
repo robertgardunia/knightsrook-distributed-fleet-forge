@@ -38,53 +38,56 @@ const FLEET_ORIGIN  = 'https://fleet.teamsteamnation.org';
 const ACTIVITY_BASE = 'https://teamsteamnation.org/activities';
 
 const VERBS: Record<string, { id: string; display: string }> = {
-  launched:    { id: 'http://adlnet.gov/expapi/verbs/launched',     display: 'launched'     },
-  experienced: { id: 'http://adlnet.gov/expapi/verbs/experienced',  display: 'experienced'  },
-  interacted:  { id: 'http://adlnet.gov/expapi/verbs/interacted',   display: 'interacted'   },
-  exited:      { id: 'http://adlnet.gov/expapi/verbs/exited',       display: 'exited'       },
+  launched:    { id: 'http://adlnet.gov/expapi/verbs/launched',     display: 'Launched'     },
+  experienced: { id: 'http://adlnet.gov/expapi/verbs/experienced',  display: 'Experienced'  },
+  interacted:  { id: 'http://adlnet.gov/expapi/verbs/interacted',   display: 'Interacted'   },
+  exited:      { id: 'http://adlnet.gov/expapi/verbs/exited',       display: 'Exited'       },
 };
 
 interface XApiStatement {
   id:        string;
-  actor:     { objectType: 'Agent'; name: string; account: { homePage: string; name: string } };
+  actor:     { objectType: 'Agent'; name: string; mbox: string };
+  authority: { objectType: 'Agent'; name: string; mbox: string };
   verb:      { id: string; display: { 'en-US': string } };
-  object:    { objectType: 'Activity'; id: string; definition?: { name?: { 'en-US': string } } };
+  object:    { objectType: 'Activity'; id: string; definition: { name: { 'en-US': string } } };
   timestamp: string;
   context:   { platform: string; extensions: Record<string, unknown> };
 }
 
 const xapiQueue: XApiStatement[] = [];
-const visitId = () => crypto.randomUUID().slice(0, 8);
+
+function toMbox(id: string): string {
+  if (id.includes('@')) return id.startsWith('mailto:') ? id : `mailto:${id}`;
+  return `mailto:${id.toLowerCase().replace(/[^a-z0-9._+-]/g, '-')}@teamsteamnation.org`;
+}
 
 function xapi(
-  verbKey:  string,
-  activity: string,
-  label:    string,
-  session:  string,
-  ext:      Record<string, unknown> = {},
+  actorName: string,
+  actorId:   string,
+  verbKey:   string,
+  objectId:  string,
+  label:     string,
+  ext:       Record<string, unknown> = {},
 ): void {
+  if (!emulating) return;
   const verb = VERBS[verbKey] ?? { id: `${FLEET_ORIGIN}/verbs/${verbKey}`, display: verbKey };
+  const mbox = toMbox(actorId);
   const stmt: XApiStatement = {
-    id:    crypto.randomUUID(),
-    actor: { objectType: 'Agent', name: 'visitor', account: { homePage: FLEET_ORIGIN, name: `anonymous:${session}` } },
-    verb:  { id: verb.id, display: { 'en-US': verb.display } },
-    object: {
-      objectType: 'Activity',
-      id: `${ACTIVITY_BASE}/${activity}`,
-      definition: { name: { 'en-US': label } },
-    },
+    id:        crypto.randomUUID(),
+    actor:     { objectType: 'Agent', name: actorName, mbox },
+    authority: { objectType: 'Agent', name: 'KnightsRook Fleet', mbox },
+    verb:      { id: verb.id, display: { 'en-US': verb.display } },
+    object:    { objectType: 'Activity', id: objectId, definition: { name: { 'en-US': label } } },
     timestamp: new Date().toISOString(),
     context: {
       platform: 'KnightsRook Fleet',
       extensions: {
-        [`${FLEET_ORIGIN}/ext/nodeId`]:    AGENT_ID,
-        [`${FLEET_ORIGIN}/ext/station`]:   AGENT_ID.split('-')[0],
-        [`${FLEET_ORIGIN}/ext/sessionId`]: session,
+        [`${FLEET_ORIGIN}/ext/nodeId`]:  AGENT_ID,
+        [`${FLEET_ORIGIN}/ext/station`]: AGENT_ID.split('-')[0],
         ...ext,
       },
     },
   };
-
   if (socket.connected) {
     socket.emit('xapi:statement', stmt);
   } else {
@@ -116,7 +119,7 @@ socket.on('kiosk:emulate:stop', ({ nodeId }: { nodeId: string }) => {
 socket.on('kiosk:scan', ({ nodeId, data }: { nodeId: string; data: string }) => {
   if (nodeId !== AGENT_ID || !emulating) return;
   console.log(`[${AGENT_ID}] scanned: ${data}`);
-  visitSession = data;
+  emulatedId = data;
   startVisit();
 });
 
@@ -126,8 +129,8 @@ const SLIDES = ['info-build-racer', 'info-controls', 'info-cornering', 'info-sca
 
 function rand(min: number, max: number) { return Math.floor(Math.random() * (max - min + 1)) + min; }
 
-let visiting  = false;
-let visitSession = '';
+let visiting   = false;
+let emulatedId = '';
 let slideTimer:  ReturnType<typeof setTimeout> | null = null;
 let departTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -137,21 +140,20 @@ function depart(dwellSecs: number) {
   if (slideTimer)  { clearTimeout(slideTimer);  slideTimer  = null; }
   if (departTimer) { clearTimeout(departTimer); departTimer = null; }
   console.log(`[${AGENT_ID}] VISITOR_DEPART dwell=${dwellSecs}s`);
-  xapi('exited', 'info-kiosk/slideshow', 'Fleet Info Kiosk', visitSession, { dwell: dwellSecs });
+  xapi('visitor', emulatedId, 'exited', `${ACTIVITY_BASE}/info-kiosk/slideshow`, 'Fleet Info Kiosk', { dwell: dwellSecs });
   setTimeout(scheduleNextVisitor, rand(8_000, 40_000));
 }
 
 function startVisit() {
-  visiting     = true;
-  visitSession = visitId();
+  visiting = true;
   const dwellMs = rand(20_000, 90_000);
   console.log(`[${AGENT_ID}] VISITOR_ARRIVE`);
-  xapi('launched', 'info-kiosk/slideshow', 'Fleet Info Kiosk', visitSession);
+  xapi('visitor', emulatedId, 'launched', `${ACTIVITY_BASE}/info-kiosk/slideshow`, 'Fleet Info Kiosk');
 
   let slideIdx = Math.floor(Math.random() * SLIDES.length);
   const slideName = SLIDES[slideIdx];
   console.log(`[${AGENT_ID}] SLIDE_VIEW slide=${slideName}`);
-  xapi('experienced', `info-kiosk/slide/${slideName}`, slideName.replace(/-/g, ' '), visitSession);
+  xapi('visitor', emulatedId, 'experienced', `${ACTIVITY_BASE}/info-kiosk/slide/${slideName}`, slideName.replace(/-/g, ' '));
 
   const scheduleSlide = (remainingMs: number) => {
     const delay = rand(8_000, 20_000);
@@ -161,7 +163,7 @@ function startVisit() {
       slideIdx = (slideIdx + 1) % SLIDES.length;
       const name = SLIDES[slideIdx];
       console.log(`[${AGENT_ID}] SLIDE_VIEW slide=${name}`);
-      xapi('experienced', `info-kiosk/slide/${name}`, name.replace(/-/g, ' '), visitSession);
+      xapi('visitor', emulatedId, 'experienced', `${ACTIVITY_BASE}/info-kiosk/slide/${name}`, name.replace(/-/g, ' '));
       scheduleSlide(remainingMs - delay);
     }, delay);
   };
@@ -172,7 +174,7 @@ function startVisit() {
     setTimeout(() => {
       if (visiting) {
         console.log(`[${AGENT_ID}] QR_SCAN`);
-        xapi('interacted', 'info-kiosk/qr-code', 'Registration QR Code', visitSession);
+        xapi('visitor', emulatedId, 'interacted', `${ACTIVITY_BASE}/info-kiosk/qr-code`, 'Registration QR Code');
       }
     }, qrDelay);
   }

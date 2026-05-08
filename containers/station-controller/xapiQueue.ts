@@ -5,11 +5,12 @@ const QUEUE_PATH = path.resolve(process.cwd(), 'data', 'xapi-queue.jsonl');
 
 export interface XApiStatement {
   id:        string;
-  actor:     { objectType: 'Agent'; name: string; account: { homePage: string; name: string } };
+  actor:     { objectType: 'Agent'; name: string; mbox: string };
+  authority: { objectType: 'Agent'; name: string; mbox: string };
   verb:      { id: string; display: { 'en-US': string } };
-  object:    { objectType: 'Activity'; id: string; definition?: { name?: { 'en-US': string } } };
+  object:    { objectType: 'Activity'; id: string; definition: { name: { 'en-US': string } } };
   timestamp: string;
-  context?:  { platform?: string; extensions?: Record<string, unknown> };
+  context:   { platform: string; extensions: Record<string, unknown> };
 }
 
 export function enqueue(stmt: XApiStatement): void {

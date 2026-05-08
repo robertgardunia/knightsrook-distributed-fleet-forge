@@ -38,54 +38,57 @@ const FLEET_ORIGIN  = 'https://fleet.teamsteamnation.org';
 const ACTIVITY_BASE = 'https://teamsteamnation.org/activities';
 
 const VERBS: Record<string, { id: string; display: string }> = {
-  initialized: { id: 'http://adlnet.gov/expapi/verbs/initialized', display: 'initialized' },
-  launched:    { id: 'http://adlnet.gov/expapi/verbs/launched',    display: 'launched'    },
-  progressed:  { id: 'http://adlnet.gov/expapi/verbs/progressed',  display: 'progressed'  },
-  completed:   { id: 'http://adlnet.gov/expapi/verbs/completed',   display: 'completed'   },
-  exited:      { id: 'http://adlnet.gov/expapi/verbs/exited',      display: 'exited'      },
+  initialized: { id: 'http://adlnet.gov/expapi/verbs/initialized', display: 'Initialized' },
+  launched:    { id: 'http://adlnet.gov/expapi/verbs/launched',    display: 'Launched'    },
+  progressed:  { id: 'http://adlnet.gov/expapi/verbs/progressed',  display: 'Progressed'  },
+  completed:   { id: 'http://adlnet.gov/expapi/verbs/completed',   display: 'Completed'   },
+  exited:      { id: 'http://adlnet.gov/expapi/verbs/exited',      display: 'Exited'      },
 };
 
 interface XApiStatement {
   id:        string;
-  actor:     { objectType: 'Agent'; name: string; account: { homePage: string; name: string } };
+  actor:     { objectType: 'Agent'; name: string; mbox: string };
+  authority: { objectType: 'Agent'; name: string; mbox: string };
   verb:      { id: string; display: { 'en-US': string } };
-  object:    { objectType: 'Activity'; id: string; definition?: { name?: { 'en-US': string } } };
+  object:    { objectType: 'Activity'; id: string; definition: { name: { 'en-US': string } } };
   timestamp: string;
   context:   { platform: string; extensions: Record<string, unknown> };
 }
 
 const xapiQueue: XApiStatement[] = [];
 
+function toMbox(id: string): string {
+  if (id.includes('@')) return id.startsWith('mailto:') ? id : `mailto:${id}`;
+  return `mailto:${id.toLowerCase().replace(/[^a-z0-9._+-]/g, '-')}@teamsteamnation.org`;
+}
+
 function xapi(
   actorName: string,
-  sessionId: string,
+  actorId:   string,
   verbKey:   string,
-  activity:  string,
+  objectId:  string,
   label:     string,
   ext:       Record<string, unknown> = {},
 ): void {
+  if (!emulating) return;
   const verb = VERBS[verbKey] ?? { id: `${FLEET_ORIGIN}/verbs/${verbKey}`, display: verbKey };
+  const mbox = toMbox(actorId);
   const stmt: XApiStatement = {
-    id:    crypto.randomUUID(),
-    actor: { objectType: 'Agent', name: actorName, account: { homePage: FLEET_ORIGIN, name: `anonymous:${sessionId}` } },
-    verb:  { id: verb.id, display: { 'en-US': verb.display } },
-    object: {
-      objectType: 'Activity',
-      id: `${ACTIVITY_BASE}/${activity}`,
-      definition: { name: { 'en-US': label } },
-    },
+    id:        crypto.randomUUID(),
+    actor:     { objectType: 'Agent', name: actorName, mbox },
+    authority: { objectType: 'Agent', name: 'KnightsRook Fleet', mbox },
+    verb:      { id: verb.id, display: { 'en-US': verb.display } },
+    object:    { objectType: 'Activity', id: objectId, definition: { name: { 'en-US': label } } },
     timestamp: new Date().toISOString(),
     context: {
       platform: 'KnightsRook Fleet',
       extensions: {
-        [`${FLEET_ORIGIN}/ext/nodeId`]:    AGENT_ID,
-        [`${FLEET_ORIGIN}/ext/station`]:   AGENT_ID.split('-')[0],
-        [`${FLEET_ORIGIN}/ext/sessionId`]: sessionId,
+        [`${FLEET_ORIGIN}/ext/nodeId`]:  AGENT_ID,
+        [`${FLEET_ORIGIN}/ext/station`]: AGENT_ID.split('-')[0],
         ...ext,
       },
     },
   };
-
   if (socket.connected) {
     socket.emit('xapi:statement', stmt);
   } else {
@@ -145,7 +148,7 @@ function clearTimers() {
 function signOut(reason: 'quit' | 'timeout' | 'displaced') {
   if (!currentPlayer) return;
   console.log(`[${AGENT_ID}] SIGNOUT player=${currentPlayer} session=${currentSession} games=${gamesThisSession} reason=${reason}`);
-  xapi(currentPlayer, currentSession!, 'exited', 'hexgl', 'HexGL Racing Game', { reason, games: gamesThisSession });
+  xapi(currentPlayer, currentPlayer, 'exited', `${ACTIVITY_BASE}/hexgl`, 'HexGL Racing Game', { reason, games: gamesThisSession });
   currentPlayer = null;
   currentSession = null;
   gamesThisSession = 0;
@@ -156,7 +159,7 @@ function signOut(reason: 'quit' | 'timeout' | 'displaced') {
 function endGame(totalScore: number) {
   if (!currentPlayer) return;
   console.log(`[${AGENT_ID}] GAME_OVER player=${currentPlayer} session=${currentSession} score=${totalScore}`);
-  xapi(currentPlayer, currentSession!, 'completed', 'hexgl', 'HexGL Racing Game', { score: { raw: totalScore } });
+  xapi(currentPlayer, currentPlayer, 'completed', `${ACTIVITY_BASE}/hexgl`, 'HexGL Racing Game', { score: { raw: totalScore } });
   gamesThisSession++;
   if (Math.random() < 0.45) {
     nextEventTimeout = setTimeout(() => startGame(), rand(3_000, 8_000));
@@ -169,7 +172,7 @@ function startGame() {
   if (!currentPlayer) return;
   const lapCount = rand(1, 3);
   console.log(`[${AGENT_ID}] GAME_START player=${currentPlayer} session=${currentSession} laps=${lapCount}`);
-  xapi(currentPlayer, currentSession!, 'launched', 'hexgl', 'HexGL Racing Game', { laps: lapCount });
+  xapi(currentPlayer, currentPlayer, 'launched', `${ACTIVITY_BASE}/hexgl`, 'HexGL Racing Game', { laps: lapCount });
 
   let lap = 0;
   let totalScore = 0;
@@ -184,7 +187,7 @@ function startGame() {
     nextEventTimeout = setTimeout(() => {
       if (!currentPlayer) return;
       console.log(`[${AGENT_ID}] LAP_COMPLETE player=${currentPlayer} lap=${lap}/${lapCount} time=${lapSecs}s score=${score}`);
-      xapi(currentPlayer, currentSession!, 'progressed', 'hexgl', 'HexGL Racing Game', {
+      xapi(currentPlayer, currentPlayer, 'progressed', `${ACTIVITY_BASE}/hexgl`, 'HexGL Racing Game', {
         lap: `${lap}/${lapCount}`, time: `${lapSecs}s`, score,
       });
       if (lap < lapCount) {
@@ -207,7 +210,7 @@ function signIn(name: string) {
   currentPlayer  = name;
   gamesThisSession = 0;
   console.log(`[${AGENT_ID}] SIGNIN player=${currentPlayer} session=${currentSession}`);
-  xapi(currentPlayer, currentSession, 'initialized', 'hexgl', 'HexGL Racing Game');
+  xapi(currentPlayer, currentPlayer, 'initialized', `${ACTIVITY_BASE}/hexgl`, 'HexGL Racing Game');
   nextEventTimeout = setTimeout(() => startGame(), rand(2_000, 6_000));
 }
 
