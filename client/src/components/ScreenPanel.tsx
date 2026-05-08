@@ -430,9 +430,106 @@ function ShellView({ node }: { node: FleetNode }) {
   );
 }
 
+// ── xAPI queue view ───────────────────────────────────────────────────────────
+
+const TIER_LABEL: Record<string, string> = {
+  'game-kiosk':          'Kiosk → Station Controller',
+  'info-kiosk':          'Kiosk → Station Controller',
+  'station-controller':  'Station Controller → Homebase',
+  'homebase':            'Homebase → Learning Locker',
+};
+
+function XApiView({ node, isMock }: { node: FleetNode; isMock?: boolean }) {
+  const [lrsStatus, setLrsStatus] = useState<{ enabled: boolean; queued: number } | null>(null);
+  const [queues,    setQueues]    = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    const onStatus = (s: { enabled: boolean; queued: number }) => setLrsStatus(s);
+    const onQueues = (q: Record<string, number>) => setQueues(q);
+    socket.on('xapi:lrs:status', onStatus);
+    socket.on('xapi:queues',     onQueues);
+    return () => {
+      socket.off('xapi:lrs:status', onStatus);
+      socket.off('xapi:queues',     onQueues);
+    };
+  }, []);
+
+  const nodeQueued = isMock
+    ? ({ 'game-kiosk': 7, 'info-kiosk': 3, 'station-controller': 24, homebase: 0 }[node.role] ?? 0)
+    : (queues[node.id] ?? 0);
+
+  const lrsEnabled = isMock ? false : (lrsStatus?.enabled ?? false);
+  const lrsQueued  = isMock ? 0 : (lrsStatus?.queued ?? 0);
+
+  const dot = lrsEnabled ? '#4ade80' : '#fb923c';
+  const stateLabel = lrsEnabled ? 'streaming' : 'queuing';
+
+  return (
+    <div style={{ flex: 1, overflow: 'auto', padding: 16, background: '#020c1b', fontSize: '0.68rem', display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+      {/* LRS state banner */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', border: `1px solid ${lrsEnabled ? '#14532d' : '#1e293b'}`, borderRadius: 4, background: lrsEnabled ? '#052e16' : '#061322' }}>
+        <span style={{ color: dot, fontSize: '0.55rem' }}>{lrsEnabled ? '●' : '■'}</span>
+        <span style={{ color: lrsEnabled ? '#4ade80' : '#fb923c', letterSpacing: '0.12em', textTransform: 'uppercase', fontSize: '0.6rem' }}>
+          {stateLabel}
+        </span>
+        <span style={{ color: '#334155', marginLeft: 'auto', fontSize: '0.6rem' }}>
+          {TIER_LABEL[node.role] ?? node.role}
+        </span>
+      </div>
+
+      {/* Queue depth for this node */}
+      <div>
+        <div style={{ color: '#475569', fontSize: '0.6rem', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 8 }}>
+          this node
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: '#061322', border: '1px solid #1e293b', borderRadius: 4 }}>
+          <span style={{ color: '#64748b' }}>{node.name}</span>
+          <span style={{ color: nodeQueued > 0 ? '#fb923c' : '#334155', fontSize: '0.8rem', fontWeight: 600, letterSpacing: '0.05em' }}>
+            {nodeQueued} queued
+          </span>
+        </div>
+      </div>
+
+      {/* Homebase queue (LRS pipeline) */}
+      <div>
+        <div style={{ color: '#475569', fontSize: '0.6rem', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 8 }}>
+          homebase → lrs
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: '#061322', border: '1px solid #1e293b', borderRadius: 4 }}>
+          <span style={{ color: '#64748b' }}>homebase queue</span>
+          <span style={{ color: lrsQueued > 0 ? '#fb923c' : '#334155', fontSize: '0.8rem', fontWeight: 600, letterSpacing: '0.05em' }}>
+            {lrsQueued} queued
+          </span>
+        </div>
+      </div>
+
+      {/* All known queue depths */}
+      {Object.keys(queues).length > 0 && !isMock && (
+        <div>
+          <div style={{ color: '#475569', fontSize: '0.6rem', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 8 }}>
+            fleet queue snapshot
+          </div>
+          {Object.entries(queues).filter(([, n]) => n > 0).length === 0 ? (
+            <div style={{ color: '#334155', fontSize: '0.62rem', padding: '6px 12px' }}>all clear — no queued statements</div>
+          ) : (
+            Object.entries(queues).filter(([, n]) => n > 0).map(([id, n]) => (
+              <div key={id} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 12px', borderBottom: '1px solid #0f172a', fontSize: '0.62rem' }}>
+                <span style={{ color: '#64748b' }}>{id}</span>
+                <span style={{ color: '#fb923c' }}>{n}</span>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+
+    </div>
+  );
+}
+
 // ── Panel ─────────────────────────────────────────────────────────────────────
 
-type Tab = 'logs' | 'shell';
+type Tab = 'logs' | 'shell' | 'xapi';
 
 export default function ScreenPanel({ node, isMock }: { node: FleetNode; isMock?: boolean }) {
   const [tab, setTab] = useState<Tab>('logs');
@@ -440,7 +537,7 @@ export default function ScreenPanel({ node, isMock }: { node: FleetNode; isMock?
   return (
     <div style={{ background: '#020c1b', display: 'flex', flexDirection: 'column', overflow: 'hidden', height: '100%', boxSizing: 'border-box' }}>
       <div style={{ height: 34, background: '#162d47', borderBottom: '1px solid #1e293b', flexShrink: 0, display: 'flex', alignItems: 'center' }}>
-        {(['logs', 'shell'] as Tab[]).map(t => (
+        {(['logs', 'shell', 'xapi'] as Tab[]).map(t => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -468,6 +565,7 @@ export default function ScreenPanel({ node, isMock }: { node: FleetNode; isMock?
 
       {tab === 'logs'  && (isMock || node.role === 'homebase' ? <DemoLogsView  node={node} /> : <LogsView  node={node} />)}
       {tab === 'shell' && (isMock || node.role === 'homebase' ? <DemoShellView node={node} /> : <ShellView node={node} />)}
+      {tab === 'xapi'  && <XApiView node={node} isMock={isMock} />}
     </div>
   );
 }

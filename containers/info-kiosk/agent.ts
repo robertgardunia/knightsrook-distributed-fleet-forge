@@ -17,7 +17,9 @@ const socket = io(HOMEBASE_URL, { reconnectionDelay: 2000, reconnectionDelayMax:
 socket.on('connect', () => {
   console.log(`[${AGENT_ID}] connected to homebase`);
   socket.emit('agent:register', { id: AGENT_ID, name: AGENT_NAME, role: AGENT_ROLE, parentId: AGENT_PARENT });
-  while (xapiQueue.length > 0) socket.emit('xapi:statement', xapiQueue.shift()!);
+  if (lrsEnabled) {
+    while (xapiQueue.length > 0) socket.emit('xapi:statement', xapiQueue.shift()!);
+  }
 });
 
 socket.on('disconnect', (reason) => {
@@ -88,12 +90,33 @@ function xapi(
       },
     },
   };
-  if (socket.connected) {
+  if (socket.connected && lrsEnabled) {
     socket.emit('xapi:statement', stmt);
   } else {
     xapiQueue.push(stmt);
+    reportQueueSize();
   }
 }
+
+// ── xAPI LRS gate ────────────────────────────────────────────────────────────
+
+let lrsEnabled = false;
+
+socket.on('xapi:lrs:set', ({ enabled }: { enabled: boolean }) => {
+  lrsEnabled = enabled;
+  console.log(`[${AGENT_ID}] xAPI LRS ${enabled ? 'enabled' : 'disabled'}`);
+  if (enabled && socket.connected && xapiQueue.length > 0) {
+    console.log(`[${AGENT_ID}] flushing ${xapiQueue.length} queued xAPI statements`);
+    while (xapiQueue.length > 0) socket.emit('xapi:statement', xapiQueue.shift()!);
+  }
+  reportQueueSize();
+});
+
+function reportQueueSize() {
+  if (socket.connected) socket.emit('xapi:queue:size', { nodeId: AGENT_ID, queued: xapiQueue.length });
+}
+
+setInterval(reportQueueSize, 5_000);
 
 // ── Emulation control ────────────────────────────────────────────────────────
 

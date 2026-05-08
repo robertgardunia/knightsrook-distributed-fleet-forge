@@ -30,6 +30,8 @@ const io = new Server(httpServer, { cors: { origin: '*' } });
 dispatcher = new Dispatcher(registry, io);
 setEmit(io.emit.bind(io));
 
+const xapiQueueSizes = new Map<string, number>();
+
 function getGraph() {
   const isMock = USE_MOCK || registry.size === 0;
   return { ...(isMock ? buildMockFleet() : registry.buildGraph()), isMock };
@@ -61,11 +63,19 @@ io.on('connection', (socket) => {
   // ── xAPI relay — receive from station controllers, POST to Learning Locker ──
   socket.on('xapi:statement', (stmt: unknown) => { relayXapi(stmt).catch(console.error); });
 
+  // ── xAPI queue size reports from kiosks / station controllers ──────────────
+  socket.on('xapi:queue:size', ({ nodeId, queued }: { nodeId: string; queued: number }) => {
+    xapiQueueSizes.set(nodeId, queued);
+    io.emit('xapi:queues', Object.fromEntries(xapiQueueSizes));
+  });
+
   // ── xAPI LRS toggle ────────────────────────────────────────────────────────
   socket.emit('xapi:lrs:status', getLrsStatus());
+  socket.emit('xapi:queues', Object.fromEntries(xapiQueueSizes));
   socket.on('xapi:lrs:set', ({ enabled }: { enabled: boolean }) => {
     setLrsEnabled(enabled);
     if (enabled) flushQueue().catch(console.error);
+    io.emit('xapi:lrs:set', { enabled });       // cascade down to station controllers
     io.emit('xapi:lrs:status', getLrsStatus());
   });
 
@@ -156,7 +166,9 @@ io.on('connection', (socket) => {
 // Retry LRS + broadcast queue status every 30s
 setInterval(() => {
   flushQueue().catch(console.error);
+  xapiQueueSizes.set('homebase', getLrsStatus().queued);
   io.emit('xapi:lrs:status', getLrsStatus());
+  io.emit('xapi:queues', Object.fromEntries(xapiQueueSizes));
 }, 30_000);
 
 process.on('unhandledRejection', (reason) => {

@@ -59,6 +59,10 @@ setInterval(() => {
   }
 }, 5_000);
 
+// ── xAPI LRS gate ─────────────────────────────────────────────────────────────
+
+let lrsEnabled = false;
+
 // ── Upstream: connect to homebase ─────────────────────────────────────────────
 
 const upstream = ioClient(HOMEBASE_URL, { reconnectionDelay: 2000, reconnectionDelayMax: 10_000 });
@@ -71,10 +75,12 @@ upstream.on('connect', () => {
     role:     'station-controller',
     parentId: 'homebase',
   });
-  const queued = size();
-  if (queued > 0) {
-    console.log(`[${AGENT_ID}] flushing ${queued} queued xAPI statements`);
-    flush((stmt) => upstream.emit('xapi:statement', stmt));
+  if (lrsEnabled) {
+    const queued = size();
+    if (queued > 0) {
+      console.log(`[${AGENT_ID}] flushing ${queued} queued xAPI statements`);
+      flush((stmt) => upstream.emit('xapi:statement', stmt));
+    }
   }
 });
 
@@ -84,6 +90,10 @@ upstream.on('connect_error', (err) => console.log(`[${AGENT_ID}] upstream error:
 setInterval(() => {
   if (upstream.connected) upstream.emit('agent:heartbeat', { id: AGENT_ID });
 }, HEARTBEAT_MS);
+
+setInterval(() => {
+  if (upstream.connected) upstream.emit('xapi:queue:size', { nodeId: AGENT_ID, queued: size() });
+}, 5_000);
 
 // ── Downstream: relay server for kiosks ──────────────────────────────────────
 
@@ -117,6 +127,7 @@ const downstream = new Server(http, { cors: { origin: '*' } });
 
 downstream.on('connection', (socket) => {
   const remoteAddress = socket.handshake.address;
+  socket.emit('xapi:lrs:set', { enabled: lrsEnabled });
 
   socket.on('agent:register', (data) => {
     const address = remoteAddress;
@@ -150,15 +161,33 @@ downstream.on('connection', (socket) => {
   });
 
   socket.on('xapi:statement', (stmt: XApiStatement) => {
-    if (upstream.connected) {
+    if (upstream.connected && lrsEnabled) {
       upstream.emit('xapi:statement', stmt);
     } else {
       enqueue(stmt);
     }
   });
 
+  socket.on('xapi:queue:size', (data: { nodeId: string; queued: number }) => {
+    if (upstream.connected) upstream.emit('xapi:queue:size', data);
+  });
+
   // Relay emulate:ready from kiosk back upstream to dashboard
   socket.on('kiosk:emulate:ready', (data: unknown) => upstream.emit('kiosk:emulate:ready', data));
+});
+
+// Relay xAPI LRS toggle from homebase down to kiosks
+upstream.on('xapi:lrs:set', ({ enabled }: { enabled: boolean }) => {
+  lrsEnabled = enabled;
+  console.log(`[${AGENT_ID}] xAPI LRS ${enabled ? 'enabled' : 'disabled'}`);
+  if (enabled && upstream.connected) {
+    const queued = size();
+    if (queued > 0) {
+      console.log(`[${AGENT_ID}] flushing ${queued} queued xAPI statements`);
+      flush((stmt) => upstream.emit('xapi:statement', stmt));
+    }
+  }
+  downstream.emit('xapi:lrs:set', { enabled });
 });
 
 // Relay emulate control events from homebase down to kiosks
