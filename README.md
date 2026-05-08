@@ -218,10 +218,80 @@ The chaos agent does not target itself or homebase (homebase is the fleet socket
 
 Progressive escalation: each Fireman queries the last hour of closed incidents for its target node before building its prompt. If a node has failed ≥2 times in the past hour, the fault is immediately classified as `endemic` regardless of the telemetry window. The prompt includes prior incident history (fault type, outcome, actions taken, how long ago) and an urgency note that escalates from "First incident" → "⚠ SECOND incident — look for a pattern" → "🚨 N incidents — prior restarts have not held, escalate." Toast notifications on the dashboard reflect incident count: first incident is blue, second is amber, third+ is red, with an `· #N` suffix on the fault tag.
 
-**xAPI pipeline** — xAPI logic lives in the `@knightsrook/xapi` workspace package (`packages/xapi/`). The package provides: `buildStatement` / `VERBS` / `ACTIVITY_BASE` / `toMbox` for building statements; `MemQueue` (in-memory, kiosks) and `FileQueue` (JSONL file-backed, station-controllers) for per-tier queueing; `createLrsClient` for homebase → Learning Locker posting; `validateStatement` to reject malformed statements at entry; and `AUTH_PATHS` / `getAuthConfig` for node-role auth config. The package is browser-safe at its main export; Node.js-only code (`FileQueue`, `createLrsClient`) is behind sub-path exports (`@knightsrook/xapi/file-queue`, `@knightsrook/xapi/lrs-client`). Kiosk agents emit fully-formed xAPI statements (ADL verb IRIs, activity IRIs on `teamsteamnation.org`) via `xapi:statement` socket events. Statements flow up the cascade: kiosk → station controller → homebase → Learning Locker. Each tier queues locally if the next hop is unavailable and flushes on reconnect. Kiosk queue is in-memory; station-controller queue is JSONL on a named Docker volume (survives restarts); homebase queue is JSONL at `server/data/xapi-queue.jsonl` with a 30s retry. Dockerfiles for containers that use the package build it in a separate `xapi-build` stage and copy the compiled output into `node_modules/@knightsrook/xapi` before compiling the container code. To extract the package to its own repo later: it has no DDF-specific imports and its `package.json` is already self-contained.
+**xAPI pipeline** — xAPI logic lives in the `@knightsrook/xapi` workspace package (`packages/xapi/`). The package provides: `buildStatement` / `VERBS` / `ACTIVITY_BASE` / `toMbox` for building statements; `MemQueue` (in-memory, kiosks) and `FileQueue` (JSONL file-backed, station-controllers) for per-tier queueing; `createLrsClient` for homebase → Learning Locker posting; `validateStatement` to reject malformed statements at entry; and `AUTH_PATHS` / `getAuthConfig` for node-role auth config. The package is browser-safe at its main export; Node.js-only code (`FileQueue`, `createLrsClient`) is behind sub-path exports (`@knightsrook/xapi/file-queue`, `@knightsrook/xapi/lrs-client`). Kiosk agents emit fully-formed xAPI statements (ADL verb IRIs, activity IRIs on `teamsteamnation.org`) via `xapi:statement` socket events. Statements flow up the cascade: kiosk → station controller → homebase → Learning Locker. Each tier queues locally if the next hop is unavailable and flushes on reconnect. Kiosk queue is in-memory; station-controller queue is JSONL on a named Docker volume (survives restarts); homebase queue is JSONL at `server/data/xapi-queue.jsonl` with a 30s retry. Dockerfiles build the package in a dedicated `xapi-build` stage and copy the compiled output into each container's `node_modules/@knightsrook/xapi`. See [Extracting `@knightsrook/xapi`](#extracting-knightsrookxapi) for how to part it out.
 
 **Playbook** — shared JSON store (`server/data/playbook.json`) of incident records (capped at 500) and extracted patterns. Universal read via `GET /api/playbook/patterns` and `GET /api/playbook/incidents`. Pattern confidence grows with each successful resolution. Firemen use it to select Haiku for high-confidence patterns and Sonnet for novel situations.
 
 **Dashboard Fireman panel** — fixed overlay in the bottom-right corner. Shows active incidents, per-step actions with reasoning, resolutions, and escalations. Escalations are highlighted in red and persist until acknowledged. Hidden when no Fireman activity has occurred.
 
 The server falls back to `buildMockFleet()` when no agents are connected (`USE_MOCK=true` forces mock always). The mock fleet has 5 stations with intentionally varied kiosk counts per station (Main Hall: 5 game + 2 info; East Pavilion: 4 game + 3 info; West Wing: 3 game + 1 info; North Atrium: 6 game + 1 info; South Concourse: 4 game + 2 info) — 35 nodes total, all at different venues.
+
+## Extracting `@knightsrook/xapi`
+
+The package has no imports from DDF and is ready to move to its own repo at any time. Steps:
+
+**1. Copy the source**
+```bash
+cp -r packages/xapi /path/to/new-repo
+cd /path/to/new-repo
+git init && git add . && git commit -m "init: extract from knightsrook-distributed-fleet-forge"
+```
+
+**2. Build and publish**
+```bash
+# Build the compiled dist (required before publishing)
+npm install
+npm run build          # tsc → dist/
+
+# Publish (adjust registry/scope as needed)
+npm publish --access public
+```
+
+**3. Update consumers in DDF**
+
+In `pnpm-workspace.yaml`, remove `packages/*` (or just the xapi entry). Then in each consumer's `package.json`, swap the workspace ref for the published version:
+
+```diff
+- "@knightsrook/xapi": "workspace:*"
++ "@knightsrook/xapi": "^0.1.0"
+```
+
+Run `pnpm install` to pull the published package.
+
+**4. Update Dockerfiles**
+
+Each container Dockerfile has an `xapi-build` stage that compiles the package from source. Replace it with a simple install:
+
+```dockerfile
+# Before (builds from source):
+FROM node:20-alpine AS xapi-build
+WORKDIR /repo/packages/xapi
+COPY packages/xapi/package.json .
+RUN npm install
+COPY packages/xapi/tsconfig.json .
+COPY packages/xapi/src/ ./src/
+RUN npm run build
+
+# After (install from registry):
+# Remove the xapi-build stage entirely.
+# In the agent-build stage, add @knightsrook/xapi to the container's
+# package.json dependencies, then npm install picks it up automatically:
+#   "dependencies": { "@knightsrook/xapi": "^0.1.0", ... }
+# Remove the manual COPY --from=xapi-build lines and the inline
+# echo '...' > node_modules/@knightsrook/xapi/package.json lines.
+```
+
+Also remove the `COPY packages/xapi/src/ /repo/packages/xapi/src/` lines (those exist only for tsconfig `paths` resolution during local type-checking — once the package is published, node_modules resolution handles it).
+
+**5. Clean up tsconfig paths**
+
+The container tsconfigs have `paths` entries pointing to `../../packages/xapi/src/*.ts` for local type resolution. Once the package is published and in `node_modules`, these are no longer needed:
+
+```diff
+-    "paths": {
+-      "@knightsrook/xapi": ["../../packages/xapi/src/index.ts"],
+-      "@knightsrook/xapi/*": ["../../packages/xapi/src/*.ts"]
+-    }
+```
+
+Similarly for `server/tsconfig.json` if paths were added there.
