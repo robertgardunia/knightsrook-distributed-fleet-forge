@@ -3,8 +3,10 @@ import jsQR from 'jsqr';
 import QRCode from 'qrcode';
 import { socket } from '../socket';
 import type { FleetNode } from '../types/fleet';
+import { getAuthConfig, type AuthMethod } from '../config/authPaths';
 
 type Phase = 'idle' | 'waiting' | 'scanning' | 'active';
+type SignInMethod = AuthMethod | null;
 
 interface Props {
   node: FleetNode;
@@ -15,6 +17,11 @@ function generateTempId(): string {
 }
 
 export default function EmulatePanel({ node }: Props) {
+  const authConfig   = getAuthConfig(node.role as Parameters<typeof getAuthConfig>[0]);
+  const [signInMethod, setSignInMethod] = useState<SignInMethod>(
+    authConfig.methods.length === 1 ? authConfig.methods[0] : null
+  );
+
   const [phase,      setPhase]      = useState<Phase>('idle');
   const [tempId,     setTempId]     = useState(() => generateTempId());
   const [qrDataUrl,  setQrDataUrl]  = useState<string>('');
@@ -26,6 +33,12 @@ export default function EmulatePanel({ node }: Props) {
   const streamRef   = useRef<MediaStream | null>(null);
   const rafRef      = useRef<number>(0);
   const scannedRef  = useRef(false);
+
+  // Start camera when QR method selected after method picker
+  useEffect(() => {
+    if (signInMethod === 'qr' && phase === 'scanning') startCamera();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [signInMethod]);
 
   // Generate QR code image whenever tempId changes
   useEffect(() => {
@@ -42,7 +55,9 @@ export default function EmulatePanel({ node }: Props) {
     const onReady = ({ nodeId }: { nodeId: string }) => {
       if (nodeId !== node.id) return;
       setPhase('scanning');
-      startCamera();
+      // Camera starts only when QR method is active; deferred until method is picked
+      // for multi-method nodes.
+      if (authConfig.methods.length === 1 && authConfig.methods[0] === 'qr') startCamera();
     };
 
     socket.on('kiosk:emulate:ready', onReady);
@@ -107,7 +122,8 @@ export default function EmulatePanel({ node }: Props) {
     setScanResult(null);
     setTempId(id);
     setPhase('scanning');
-    scanLoop();
+    if (authConfig.methods.length !== 1) setSignInMethod(null);
+    if (signInMethod === 'qr') scanLoop();
   }
 
   return (
@@ -130,8 +146,32 @@ export default function EmulatePanel({ node }: Props) {
       {/* Body */}
       <div style={{ flex: 1, overflow: 'auto', padding: 12, display: 'flex', flexDirection: 'column', gap: 12 }}>
 
-        {/* Camera + scan indicator */}
-        {(phase === 'scanning' || phase === 'active') && (
+        {/* Method picker — shown when multiple methods available and none chosen yet */}
+        {phase === 'scanning' && signInMethod === null && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div style={{ color: '#475569', fontSize: '0.6rem', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 4 }}>
+              sign-in method
+            </div>
+            {authConfig.methods.map(m => (
+              <button
+                key={m}
+                onClick={() => setSignInMethod(m)}
+                style={{
+                  background: 'transparent', border: '1px solid #1e3a5f', color: '#93c5fd',
+                  padding: '8px 14px', borderRadius: 3, fontSize: '0.65rem',
+                  letterSpacing: '0.1em', textTransform: 'uppercase', cursor: 'pointer',
+                  textAlign: 'left',
+                }}
+              >
+                {m === 'qr'     ? '⬡  QR Code / Card Scan' : null}
+                {m === 'moodle' ? '⬡  Moodle Username + Password' : null}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Camera + scan indicator — QR method only */}
+        {(phase === 'scanning' || phase === 'active') && signInMethod === 'qr' && (
           <div style={{ position: 'relative', background: '#000', borderRadius: 4, overflow: 'hidden', lineHeight: 0 }}>
             <video
               ref={videoRef}
@@ -156,8 +196,8 @@ export default function EmulatePanel({ node }: Props) {
           </div>
         )}
 
-        {/* QR code */}
-        {phase !== 'waiting' && (
+        {/* QR code — QR method only */}
+        {phase !== 'waiting' && signInMethod === 'qr' && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
             <div style={{ color: '#475569', letterSpacing: '0.1em', textTransform: 'uppercase', fontSize: '0.6rem' }}>
               {phase === 'active' ? 'session id' : 'scan with phone or present card'}
@@ -183,7 +223,36 @@ export default function EmulatePanel({ node }: Props) {
           </button>
         )}
 
-        {phase === 'scanning' && (
+        {/* Moodle sign-in placeholder */}
+        {phase === 'scanning' && signInMethod === 'moodle' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '12px', background: '#061322', border: '1px solid #1e293b', borderRadius: 4 }}>
+            <div style={{ color: '#475569', fontSize: '0.6rem', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 4 }}>
+              moodle sign-in
+            </div>
+            <input
+              disabled
+              placeholder="username"
+              style={{ background: '#020c1b', border: '1px solid #1e293b', color: '#64748b', padding: '5px 10px', fontSize: '0.65rem', borderRadius: 2, fontFamily: 'inherit', outline: 'none', cursor: 'not-allowed' }}
+            />
+            <input
+              disabled
+              type="password"
+              placeholder="password"
+              style={{ background: '#020c1b', border: '1px solid #1e293b', color: '#64748b', padding: '5px 10px', fontSize: '0.65rem', borderRadius: 2, fontFamily: 'inherit', outline: 'none', cursor: 'not-allowed' }}
+            />
+            <div style={{ color: '#334155', fontSize: '0.6rem', letterSpacing: '0.08em' }}>
+              moodle auth — not yet implemented
+            </div>
+            <button
+              onClick={() => setSignInMethod(null)}
+              style={{ background: 'transparent', border: '1px solid #1e293b', color: '#475569', padding: '4px 10px', borderRadius: 3, fontSize: '0.6rem', letterSpacing: '0.1em', textTransform: 'uppercase', cursor: 'pointer', marginTop: 4 }}
+            >
+              ← back
+            </button>
+          </div>
+        )}
+
+        {phase === 'scanning' && signInMethod === 'qr' && (
           <button
             onClick={() => handleScan(tempId)}
             style={{
