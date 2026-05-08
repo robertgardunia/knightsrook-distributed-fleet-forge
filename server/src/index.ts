@@ -8,6 +8,7 @@ import { streamLogs, openShell, type ShellHandle, streamStats, type NodeStats } 
 import { recordStats, recordEvent } from './lib/telemetry.js';
 import { Dispatcher } from './lib/dispatcher.js';
 import { setEmit } from './routes/index.js';
+import { relay as relayXapi } from './lib/xapiRelay.js';
 
 const PORT     = Number(process.env.PORT) || 5020;
 const USE_MOCK = process.env.USE_MOCK === 'true';
@@ -56,6 +57,9 @@ io.on('connection', (socket) => {
 
   // ── Chaos agent visibility — relay to all dashboard clients ────────────────
   socket.on('chaos:action', (data) => io.emit('chaos:action', data));
+
+  // ── xAPI relay — receive from station controllers, POST to Learning Locker ──
+  socket.on('xapi:statement', (stmt: unknown) => { relayXapi(stmt).catch(console.error); });
 
   // ── Log streaming ──────────────────────────────────────────────────────────
   socket.on('node:logs:subscribe', async ({ nodeId }: { nodeId: string }) => {

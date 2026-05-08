@@ -2,7 +2,7 @@ FROM node:20-alpine AS build
 WORKDIR /app
 COPY package.json ./
 RUN npm install
-COPY tsconfig.json relay.ts telemetry.ts ./
+COPY tsconfig.json relay.ts telemetry.ts xapiQueue.ts ./
 RUN npm run build
 
 FROM node:20-alpine

@@ -17,6 +17,7 @@ const socket = io(HOMEBASE_URL, { reconnectionDelay: 2000, reconnectionDelayMax:
 socket.on('connect', () => {
   console.log(`[${AGENT_ID}] connected to homebase`);
   socket.emit('agent:register', { id: AGENT_ID, name: AGENT_NAME, role: AGENT_ROLE, parentId: AGENT_PARENT });
+  while (xapiQueue.length > 0) socket.emit('xapi:statement', xapiQueue.shift()!);
 });
 
 socket.on('disconnect', (reason) => {
@@ -31,14 +32,75 @@ setInterval(() => {
   if (socket.connected) socket.emit('agent:heartbeat', { id: AGENT_ID });
 }, HEARTBEAT_MS);
 
+// ── xAPI statement builder ───────────────────────────────────────────────────
+
+const FLEET_ORIGIN  = 'https://fleet.teamsteamnation.org';
+const ACTIVITY_BASE = 'https://teamsteamnation.org/activities';
+
+const VERBS: Record<string, { id: string; display: string }> = {
+  launched:    { id: 'http://adlnet.gov/expapi/verbs/launched',     display: 'launched'     },
+  experienced: { id: 'http://adlnet.gov/expapi/verbs/experienced',  display: 'experienced'  },
+  interacted:  { id: 'http://adlnet.gov/expapi/verbs/interacted',   display: 'interacted'   },
+  exited:      { id: 'http://adlnet.gov/expapi/verbs/exited',       display: 'exited'       },
+};
+
+interface XApiStatement {
+  id:        string;
+  actor:     { objectType: 'Agent'; name: string; account: { homePage: string; name: string } };
+  verb:      { id: string; display: { 'en-US': string } };
+  object:    { objectType: 'Activity'; id: string; definition?: { name?: { 'en-US': string } } };
+  timestamp: string;
+  context:   { platform: string; extensions: Record<string, unknown> };
+}
+
+const xapiQueue: XApiStatement[] = [];
+const visitId = () => crypto.randomUUID().slice(0, 8);
+
+function xapi(
+  verbKey:  string,
+  activity: string,
+  label:    string,
+  session:  string,
+  ext:      Record<string, unknown> = {},
+): void {
+  const verb = VERBS[verbKey] ?? { id: `${FLEET_ORIGIN}/verbs/${verbKey}`, display: verbKey };
+  const stmt: XApiStatement = {
+    id:    crypto.randomUUID(),
+    actor: { objectType: 'Agent', name: 'visitor', account: { homePage: FLEET_ORIGIN, name: `anonymous:${session}` } },
+    verb:  { id: verb.id, display: { 'en-US': verb.display } },
+    object: {
+      objectType: 'Activity',
+      id: `${ACTIVITY_BASE}/${activity}`,
+      definition: { name: { 'en-US': label } },
+    },
+    timestamp: new Date().toISOString(),
+    context: {
+      platform: 'KnightsRook Fleet',
+      extensions: {
+        [`${FLEET_ORIGIN}/ext/nodeId`]:    AGENT_ID,
+        [`${FLEET_ORIGIN}/ext/station`]:   AGENT_ID.split('-')[0],
+        [`${FLEET_ORIGIN}/ext/sessionId`]: session,
+        ...ext,
+      },
+    },
+  };
+
+  if (socket.connected) {
+    socket.emit('xapi:statement', stmt);
+  } else {
+    xapiQueue.push(stmt);
+  }
+}
+
 // ── Visitor simulation ───────────────────────────────────────────────────────
 
-const SLIDES = ['info-build-racer.png', 'info-controls.png', 'info-cornering.png', 'info-scan-qr.png'];
+const SLIDES = ['info-build-racer', 'info-controls', 'info-cornering', 'info-scan-qr'];
 
 function rand(min: number, max: number) { return Math.floor(Math.random() * (max - min + 1)) + min; }
 
-let visiting = false;
-let slideTimer: ReturnType<typeof setTimeout> | null = null;
+let visiting  = false;
+let visitSession = '';
+let slideTimer:  ReturnType<typeof setTimeout> | null = null;
 let departTimer: ReturnType<typeof setTimeout> | null = null;
 
 function depart(dwellSecs: number) {
@@ -47,42 +109,42 @@ function depart(dwellSecs: number) {
   if (slideTimer)  { clearTimeout(slideTimer);  slideTimer  = null; }
   if (departTimer) { clearTimeout(departTimer); departTimer = null; }
   console.log(`[${AGENT_ID}] VISITOR_DEPART dwell=${dwellSecs}s`);
-  console.log(`[${AGENT_ID}] xAPI verb=exited actor=visitor object=info-kiosk/slideshow dwell=${dwellSecs}s`);
+  xapi('exited', 'info-kiosk/slideshow', 'Fleet Info Kiosk', visitSession, { dwell: dwellSecs });
   setTimeout(scheduleNextVisitor, rand(8_000, 40_000));
 }
 
 function startVisit() {
-  visiting = true;
+  visiting     = true;
+  visitSession = visitId();
   const dwellMs = rand(20_000, 90_000);
   console.log(`[${AGENT_ID}] VISITOR_ARRIVE`);
-  console.log(`[${AGENT_ID}] xAPI verb=launched actor=visitor object=info-kiosk/slideshow`);
+  xapi('launched', 'info-kiosk/slideshow', 'Fleet Info Kiosk', visitSession);
 
-  // Log initial slide
   let slideIdx = Math.floor(Math.random() * SLIDES.length);
-  console.log(`[${AGENT_ID}] SLIDE_VIEW slide=${SLIDES[slideIdx]}`);
-  console.log(`[${AGENT_ID}] xAPI verb=experienced actor=visitor object=info-kiosk/${SLIDES[slideIdx]}`);
+  const slideName = SLIDES[slideIdx];
+  console.log(`[${AGENT_ID}] SLIDE_VIEW slide=${slideName}`);
+  xapi('experienced', `info-kiosk/slide/${slideName}`, slideName.replace(/-/g, ' '), visitSession);
 
-  // Schedule subsequent slide views during the dwell
   const scheduleSlide = (remainingMs: number) => {
     const delay = rand(8_000, 20_000);
     if (delay >= remainingMs - 3_000) return;
     slideTimer = setTimeout(() => {
       if (!visiting) return;
       slideIdx = (slideIdx + 1) % SLIDES.length;
-      console.log(`[${AGENT_ID}] SLIDE_VIEW slide=${SLIDES[slideIdx]}`);
-      console.log(`[${AGENT_ID}] xAPI verb=experienced actor=visitor object=info-kiosk/${SLIDES[slideIdx]}`);
+      const name = SLIDES[slideIdx];
+      console.log(`[${AGENT_ID}] SLIDE_VIEW slide=${name}`);
+      xapi('experienced', `info-kiosk/slide/${name}`, name.replace(/-/g, ' '), visitSession);
       scheduleSlide(remainingMs - delay);
     }, delay);
   };
   scheduleSlide(dwellMs);
 
-  // Maybe scan QR code in last quarter of visit
   if (Math.random() < 0.25) {
     const qrDelay = Math.floor(dwellMs * (0.6 + Math.random() * 0.3));
     setTimeout(() => {
       if (visiting) {
         console.log(`[${AGENT_ID}] QR_SCAN`);
-        console.log(`[${AGENT_ID}] xAPI verb=interacted actor=visitor object=info-kiosk/qr-code`);
+        xapi('interacted', 'info-kiosk/qr-code', 'Registration QR Code', visitSession);
       }
     }, qrDelay);
   }

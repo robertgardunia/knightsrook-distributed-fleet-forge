@@ -17,6 +17,7 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import { io as ioClient } from 'socket.io-client';
 import { recordEvent, getHistory, getAllSince } from './telemetry.js';
+import { enqueue, flush, size, type XApiStatement } from './xapiQueue.js';
 
 const AGENT_ID     = process.env.AGENT_ID!;
 const AGENT_NAME   = process.env.AGENT_NAME!;
@@ -70,6 +71,11 @@ upstream.on('connect', () => {
     role:     'station-controller',
     parentId: 'homebase',
   });
+  const queued = size();
+  if (queued > 0) {
+    console.log(`[${AGENT_ID}] flushing ${queued} queued xAPI statements`);
+    flush((stmt) => upstream.emit('xapi:statement', stmt));
+  }
 });
 
 upstream.on('disconnect', (reason) => console.log(`[${AGENT_ID}] upstream disconnected: ${reason}`));
@@ -141,6 +147,14 @@ downstream.on('connection', (socket) => {
 
   socket.on('fleet:request', () => {
     upstream.emit('fleet:request');
+  });
+
+  socket.on('xapi:statement', (stmt: XApiStatement) => {
+    if (upstream.connected) {
+      upstream.emit('xapi:statement', stmt);
+    } else {
+      enqueue(stmt);
+    }
   });
 });
 

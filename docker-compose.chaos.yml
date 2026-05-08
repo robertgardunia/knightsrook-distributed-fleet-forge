@@ -28,8 +28,12 @@ services:
       USE_MOCK: "false"
       TOXIPROXY_URL: "http://chaos-proxy:8474"
       ANTHROPIC_API_KEY: "${ANTHROPIC_API_KEY}"
+      LL_ENDPOINT: "${LL_ENDPOINT}"
+      LL_KEY: "${LL_KEY}"
+      LL_SECRET: "${LL_SECRET}"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      - homebase-data:/app/data
     ports:
       - "5025:5020"
     networks: [fleet-net]
@@ -44,6 +48,8 @@ services:
       AGENT_NAME: S1
       HOMEBASE_URL: http://chaos-proxy:21001
       RELAY_PORT: "5021"
+    volumes:
+      - s1-controller-data:/app/data
     networks: [fleet-net, station-s1-net]
     depends_on: [homebase, chaos-proxy]
     restart: unless-stopped
@@ -115,6 +121,8 @@ services:
       AGENT_NAME: S2
       HOMEBASE_URL: http://chaos-proxy:21002
       RELAY_PORT: "5021"
+    volumes:
+      - s2-controller-data:/app/data
     networks: [fleet-net, station-s2-net]
     depends_on: [homebase, chaos-proxy]
     restart: unless-stopped
@@ -186,6 +194,8 @@ services:
       AGENT_NAME: S3
       HOMEBASE_URL: http://chaos-proxy:21003
       RELAY_PORT: "5021"
+    volumes:
+      - s3-controller-data:/app/data
     networks: [fleet-net, station-s3-net]
     depends_on: [homebase, chaos-proxy]
     restart: unless-stopped
@@ -257,6 +267,8 @@ services:
       AGENT_NAME: S4
       HOMEBASE_URL: http://chaos-proxy:21004
       RELAY_PORT: "5021"
+    volumes:
+      - s4-controller-data:/app/data
     networks: [fleet-net, station-s4-net]
     depends_on: [homebase, chaos-proxy]
     restart: unless-stopped
@@ -352,3 +364,10 @@ networks:
   station-s2-net:
   station-s3-net:
   station-s4-net:
+
+volumes:
+  homebase-data:
+  s1-controller-data:
+  s2-controller-data:
+  s3-controller-data:
+  s4-controller-data:

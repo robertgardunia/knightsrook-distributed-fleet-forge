@@ -17,6 +17,7 @@ const socket = io(HOMEBASE_URL, { reconnectionDelay: 2000, reconnectionDelayMax:
 socket.on('connect', () => {
   console.log(`[${AGENT_ID}] connected to homebase`);
   socket.emit('agent:register', { id: AGENT_ID, name: AGENT_NAME, role: AGENT_ROLE, parentId: AGENT_PARENT });
+  while (xapiQueue.length > 0) socket.emit('xapi:statement', xapiQueue.shift()!);
 });
 
 socket.on('disconnect', (reason) => {
@@ -30,6 +31,67 @@ socket.on('connect_error', (err) => {
 setInterval(() => {
   if (socket.connected) socket.emit('agent:heartbeat', { id: AGENT_ID });
 }, HEARTBEAT_MS);
+
+// ── xAPI statement builder ───────────────────────────────────────────────────
+
+const FLEET_ORIGIN  = 'https://fleet.teamsteamnation.org';
+const ACTIVITY_BASE = 'https://teamsteamnation.org/activities';
+
+const VERBS: Record<string, { id: string; display: string }> = {
+  initialized: { id: 'http://adlnet.gov/expapi/verbs/initialized', display: 'initialized' },
+  launched:    { id: 'http://adlnet.gov/expapi/verbs/launched',    display: 'launched'    },
+  progressed:  { id: 'http://adlnet.gov/expapi/verbs/progressed',  display: 'progressed'  },
+  completed:   { id: 'http://adlnet.gov/expapi/verbs/completed',   display: 'completed'   },
+  exited:      { id: 'http://adlnet.gov/expapi/verbs/exited',      display: 'exited'      },
+};
+
+interface XApiStatement {
+  id:        string;
+  actor:     { objectType: 'Agent'; name: string; account: { homePage: string; name: string } };
+  verb:      { id: string; display: { 'en-US': string } };
+  object:    { objectType: 'Activity'; id: string; definition?: { name?: { 'en-US': string } } };
+  timestamp: string;
+  context:   { platform: string; extensions: Record<string, unknown> };
+}
+
+const xapiQueue: XApiStatement[] = [];
+
+function xapi(
+  actorName: string,
+  sessionId: string,
+  verbKey:   string,
+  activity:  string,
+  label:     string,
+  ext:       Record<string, unknown> = {},
+): void {
+  const verb = VERBS[verbKey] ?? { id: `${FLEET_ORIGIN}/verbs/${verbKey}`, display: verbKey };
+  const stmt: XApiStatement = {
+    id:    crypto.randomUUID(),
+    actor: { objectType: 'Agent', name: actorName, account: { homePage: FLEET_ORIGIN, name: `anonymous:${sessionId}` } },
+    verb:  { id: verb.id, display: { 'en-US': verb.display } },
+    object: {
+      objectType: 'Activity',
+      id: `${ACTIVITY_BASE}/${activity}`,
+      definition: { name: { 'en-US': label } },
+    },
+    timestamp: new Date().toISOString(),
+    context: {
+      platform: 'KnightsRook Fleet',
+      extensions: {
+        [`${FLEET_ORIGIN}/ext/nodeId`]:    AGENT_ID,
+        [`${FLEET_ORIGIN}/ext/station`]:   AGENT_ID.split('-')[0],
+        [`${FLEET_ORIGIN}/ext/sessionId`]: sessionId,
+        ...ext,
+      },
+    },
+  };
+
+  if (socket.connected) {
+    socket.emit('xapi:statement', stmt);
+  } else {
+    xapiQueue.push(stmt);
+  }
+}
 
 // ── Player simulation ────────────────────────────────────────────────────────
 
@@ -50,14 +112,14 @@ let sessionTimeout: ReturnType<typeof setTimeout> | null = null;
 let nextEventTimeout: ReturnType<typeof setTimeout> | null = null;
 
 function clearTimers() {
-  if (sessionTimeout)  { clearTimeout(sessionTimeout);  sessionTimeout  = null; }
+  if (sessionTimeout)   { clearTimeout(sessionTimeout);   sessionTimeout   = null; }
   if (nextEventTimeout) { clearTimeout(nextEventTimeout); nextEventTimeout = null; }
 }
 
 function signOut(reason: 'quit' | 'timeout' | 'displaced') {
   if (!currentPlayer) return;
   console.log(`[${AGENT_ID}] SIGNOUT player=${currentPlayer} session=${currentSession} games=${gamesThisSession} reason=${reason}`);
-  console.log(`[${AGENT_ID}] xAPI verb=exited actor=${currentPlayer} object=hexgl/cityscape session=${currentSession} games=${gamesThisSession} reason=${reason}`);
+  xapi(currentPlayer, currentSession!, 'exited', 'hexgl', 'HexGL Racing Game', { reason, games: gamesThisSession });
   currentPlayer = null;
   currentSession = null;
   gamesThisSession = 0;
@@ -68,9 +130,8 @@ function signOut(reason: 'quit' | 'timeout' | 'displaced') {
 function endGame(totalScore: number) {
   if (!currentPlayer) return;
   console.log(`[${AGENT_ID}] GAME_OVER player=${currentPlayer} session=${currentSession} score=${totalScore}`);
-  console.log(`[${AGENT_ID}] xAPI verb=completed actor=${currentPlayer} object=hexgl/cityscape score=${totalScore} session=${currentSession}`);
+  xapi(currentPlayer, currentSession!, 'completed', 'hexgl', 'HexGL Racing Game', { score: { raw: totalScore } });
   gamesThisSession++;
-  // 45% chance of another round, otherwise idle a bit then leave
   if (Math.random() < 0.45) {
     nextEventTimeout = setTimeout(() => startGame(), rand(3_000, 8_000));
   } else {
@@ -82,7 +143,7 @@ function startGame() {
   if (!currentPlayer) return;
   const lapCount = rand(1, 3);
   console.log(`[${AGENT_ID}] GAME_START player=${currentPlayer} session=${currentSession} laps=${lapCount}`);
-  console.log(`[${AGENT_ID}] xAPI verb=launched actor=${currentPlayer} object=hexgl/cityscape laps=${lapCount} session=${currentSession}`);
+  xapi(currentPlayer, currentSession!, 'launched', 'hexgl', 'HexGL Racing Game', { laps: lapCount });
 
   let lap = 0;
   let totalScore = 0;
@@ -97,7 +158,9 @@ function startGame() {
     nextEventTimeout = setTimeout(() => {
       if (!currentPlayer) return;
       console.log(`[${AGENT_ID}] LAP_COMPLETE player=${currentPlayer} lap=${lap}/${lapCount} time=${lapSecs}s score=${score}`);
-      console.log(`[${AGENT_ID}] xAPI verb=progressed actor=${currentPlayer} object=hexgl/cityscape lap=${lap}/${lapCount} time=${lapSecs}s score=${score}`);
+      xapi(currentPlayer, currentSession!, 'progressed', 'hexgl', 'HexGL Racing Game', {
+        lap: `${lap}/${lapCount}`, time: `${lapSecs}s`, score,
+      });
       if (lap < lapCount) {
         nextLap();
       } else {
@@ -108,7 +171,6 @@ function startGame() {
 
   nextLap();
 
-  // Hard cap: 5 min per session regardless of game state
   if (sessionTimeout) clearTimeout(sessionTimeout);
   sessionTimeout = setTimeout(() => signOut('timeout'), 5 * 60_000);
 }
@@ -119,7 +181,7 @@ function signIn(name: string) {
   currentPlayer  = name;
   gamesThisSession = 0;
   console.log(`[${AGENT_ID}] SIGNIN player=${currentPlayer} session=${currentSession}`);
-  console.log(`[${AGENT_ID}] xAPI verb=initialized actor=${currentPlayer} object=hexgl/cityscape session=${currentSession}`);
+  xapi(currentPlayer, currentSession, 'initialized', 'hexgl', 'HexGL Racing Game');
   nextEventTimeout = setTimeout(() => startGame(), rand(2_000, 6_000));
 }
 
@@ -129,5 +191,4 @@ function scheduleArrival() {
 
 console.log(`[${AGENT_ID}] starting — role=${AGENT_ROLE} parent=${AGENT_PARENT ?? 'none'} homebase=${HOMEBASE_URL}`);
 
-// Stagger startup so all kiosks don't arrive simultaneously
 setTimeout(scheduleArrival, rand(0, 30_000));
