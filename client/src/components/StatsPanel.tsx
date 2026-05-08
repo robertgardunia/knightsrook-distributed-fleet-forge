@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { socket } from '../socket';
 import type { FleetNode, NodeRole, NodeStatus, NodeStats } from '../types/fleet';
+import EmulatePanel from './EmulatePanel';
 
 const TIER_LABEL: Record<NodeRole, string> = {
   'homebase':            'Tier 1 · Home Base',
@@ -221,13 +222,18 @@ function ScreenView({ node, isMock, muted, onToggleMute }: { node: FleetNode; is
 
 type Tab = 'stats' | 'screen';
 
+const KIOSK_ROLES = new Set(['game-kiosk', 'info-kiosk']);
+
 export default function StatsPanel({ node, isMock }: { node: FleetNode; isMock?: boolean }) {
-  const [tab, setTab] = useState<Tab>('stats');
+  const [tab,       setTab]       = useState<Tab>('stats');
   const [liveStats, setLiveStats] = useState<NodeStats | undefined>();
-  const [muted, setMuted] = useState(true);
+  const [muted,     setMuted]     = useState(true);
+  const [emulating, setEmulating] = useState(false);
+  const canEmulate = !isMock && KIOSK_ROLES.has(node.role);
 
   useEffect(() => {
     setMuted(true);
+    setEmulating(false);
   }, [node.id]);
 
   useEffect(() => {
@@ -273,9 +279,30 @@ export default function StatsPanel({ node, isMock }: { node: FleetNode; isMock?:
         </span>
       </div>
 
-      <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-        {tab === 'stats'  && <StatsView  node={node} live={liveStats} />}
-        {tab === 'screen' && <ScreenView node={node} isMock={isMock} muted={muted} onToggleMute={() => setMuted(m => !m)} />}
+      <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+        {tab === 'stats' && <StatsView node={node} live={liveStats} />}
+        {tab === 'screen' && !emulating && (
+          <>
+            <ScreenView node={node} isMock={isMock} muted={muted} onToggleMute={() => setMuted(m => !m)} />
+            {canEmulate && (
+              <button
+                onClick={() => { setEmulating(true); }}
+                style={{
+                  position: 'absolute', bottom: 40, left: '50%', transform: 'translateX(-50%)',
+                  background: 'rgba(2,12,27,0.9)', border: '1px solid #1e3a5f', color: '#93c5fd',
+                  padding: '5px 16px', borderRadius: 3, fontSize: '0.62rem',
+                  letterSpacing: '0.12em', textTransform: 'uppercase', cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                Take Control
+              </button>
+            )}
+          </>
+        )}
+        {tab === 'screen' && emulating && (
+          <EmulatePanel node={node} onStop={() => setEmulating(false)} />
+        )}
       </div>
     </div>
   );

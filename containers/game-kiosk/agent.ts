@@ -93,6 +93,32 @@ function xapi(
   }
 }
 
+// ── Emulation control ────────────────────────────────────────────────────────
+
+let emulating = false;
+
+socket.on('kiosk:emulate:start', ({ nodeId }: { nodeId: string }) => {
+  if (nodeId !== AGENT_ID) return;
+  emulating = true;
+  clearTimers();
+  if (currentPlayer) signOut('displaced');
+  console.log(`[${AGENT_ID}] emulation mode — auto-sim paused`);
+  socket.emit('kiosk:emulate:ready', { nodeId: AGENT_ID });
+});
+
+socket.on('kiosk:emulate:stop', ({ nodeId }: { nodeId: string }) => {
+  if (nodeId !== AGENT_ID) return;
+  emulating = false;
+  console.log(`[${AGENT_ID}] emulation ended — resuming auto-sim`);
+  scheduleArrival();
+});
+
+socket.on('kiosk:scan', ({ nodeId, data }: { nodeId: string; data: string }) => {
+  if (nodeId !== AGENT_ID || !emulating) return;
+  console.log(`[${AGENT_ID}] scanned: ${data}`);
+  signIn(data);
+});
+
 // ── Player simulation ────────────────────────────────────────────────────────
 
 const PLAYERS = [
@@ -186,7 +212,8 @@ function signIn(name: string) {
 }
 
 function scheduleArrival() {
-  nextEventTimeout = setTimeout(() => signIn(pick(PLAYERS)), rand(10_000, 45_000));
+  if (emulating) return;
+  nextEventTimeout = setTimeout(() => { if (!emulating) signIn(pick(PLAYERS)); }, rand(10_000, 45_000));
 }
 
 console.log(`[${AGENT_ID}] starting — role=${AGENT_ROLE} parent=${AGENT_PARENT ?? 'none'} homebase=${HOMEBASE_URL}`);

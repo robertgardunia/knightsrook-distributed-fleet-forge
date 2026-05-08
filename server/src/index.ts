@@ -61,6 +61,12 @@ io.on('connection', (socket) => {
   // ── xAPI relay — receive from station controllers, POST to Learning Locker ──
   socket.on('xapi:statement', (stmt: unknown) => { relayXapi(stmt).catch(console.error); });
 
+  // ── Kiosk emulation — relay control events through the fleet ─────────────
+  socket.on('kiosk:emulate:start', (data: unknown) => io.emit('kiosk:emulate:start', data));
+  socket.on('kiosk:emulate:stop',  (data: unknown) => io.emit('kiosk:emulate:stop',  data));
+  socket.on('kiosk:scan',          (data: unknown) => io.emit('kiosk:scan',          data));
+  socket.on('kiosk:emulate:ready', (data: unknown) => io.emit('kiosk:emulate:ready', data));
+
   // ── Log streaming ──────────────────────────────────────────────────────────
   socket.on('node:logs:subscribe', async ({ nodeId }: { nodeId: string }) => {
     const key = `logs:${nodeId}`;

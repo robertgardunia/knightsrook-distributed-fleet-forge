@@ -92,6 +92,34 @@ function xapi(
   }
 }
 
+// ── Emulation control ────────────────────────────────────────────────────────
+
+let emulating = false;
+
+socket.on('kiosk:emulate:start', ({ nodeId }: { nodeId: string }) => {
+  if (nodeId !== AGENT_ID) return;
+  emulating = true;
+  visiting  = false;
+  if (slideTimer)  { clearTimeout(slideTimer);  slideTimer  = null; }
+  if (departTimer) { clearTimeout(departTimer); departTimer = null; }
+  console.log(`[${AGENT_ID}] emulation mode — auto-sim paused`);
+  socket.emit('kiosk:emulate:ready', { nodeId: AGENT_ID });
+});
+
+socket.on('kiosk:emulate:stop', ({ nodeId }: { nodeId: string }) => {
+  if (nodeId !== AGENT_ID) return;
+  emulating = false;
+  console.log(`[${AGENT_ID}] emulation ended — resuming auto-sim`);
+  scheduleNextVisitor();
+});
+
+socket.on('kiosk:scan', ({ nodeId, data }: { nodeId: string; data: string }) => {
+  if (nodeId !== AGENT_ID || !emulating) return;
+  console.log(`[${AGENT_ID}] scanned: ${data}`);
+  visitSession = data;
+  startVisit();
+});
+
 // ── Visitor simulation ───────────────────────────────────────────────────────
 
 const SLIDES = ['info-build-racer', 'info-controls', 'info-cornering', 'info-scan-qr'];
@@ -153,7 +181,8 @@ function startVisit() {
 }
 
 function scheduleNextVisitor() {
-  setTimeout(startVisit, rand(10_000, 45_000));
+  if (emulating) return;
+  setTimeout(() => { if (!emulating) startVisit(); }, rand(10_000, 45_000));
 }
 
 console.log(`[${AGENT_ID}] starting — role=${AGENT_ROLE} parent=${AGENT_PARENT ?? 'none'} homebase=${HOMEBASE_URL}`);

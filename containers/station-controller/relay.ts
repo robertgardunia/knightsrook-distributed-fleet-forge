@@ -156,6 +156,20 @@ downstream.on('connection', (socket) => {
       enqueue(stmt);
     }
   });
+
+  // Relay emulate:ready from kiosk back upstream to dashboard
+  socket.on('kiosk:emulate:ready', (data: unknown) => upstream.emit('kiosk:emulate:ready', data));
+});
+
+// Relay emulate control events from homebase down to kiosks
+upstream.on('kiosk:emulate:start', (data: { nodeId: string }) => {
+  if (kiosks.has(data.nodeId)) downstream.emit('kiosk:emulate:start', data);
+});
+upstream.on('kiosk:emulate:stop', (data: { nodeId: string }) => {
+  if (kiosks.has(data.nodeId)) downstream.emit('kiosk:emulate:stop', data);
+});
+upstream.on('kiosk:scan', (data: { nodeId: string; value: string }) => {
+  if (kiosks.has(data.nodeId)) downstream.emit('kiosk:scan', data);
 });
 
 // Push fleet graph updates down to connected kiosks
