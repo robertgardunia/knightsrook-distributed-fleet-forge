@@ -13,9 +13,18 @@ export const VERBS: Record<string, { id: string; display: string }> = {
   interacted:  { id: 'http://adlnet.gov/expapi/verbs/interacted',  display: 'Interacted'  },
 };
 
+// System authority mbox — used as the asserting agent in every statement.
+// Never the actor's own mbox; LRS overwrites authority on ingest anyway.
+export const PLATFORM_MBOX = 'mailto:fleet@teamsteamnation.org';
+
 export function toMbox(id: string): string {
   if (id.includes('@')) return id.startsWith('mailto:') ? id : `mailto:${id}`;
   return `mailto:${id.toLowerCase().replace(/[^a-z0-9._+-]/g, '-')}@teamsteamnation.org`;
+}
+
+/** Returns true if `s` is a valid TSN seed (16-char lowercase hex). */
+export function isTsnSeed(s: string): boolean {
+  return /^[0-9a-f]{16}$/.test(s);
 }
 
 export interface BuildStatementParams {
@@ -36,7 +45,7 @@ export function buildStatement(p: BuildStatementParams): XApiStatement {
   return {
     id:        crypto.randomUUID(),
     actor:     { objectType: 'Agent', name: p.actorName, mbox },
-    authority: { objectType: 'Agent', name: platform, mbox },
+    authority: { objectType: 'Agent', name: platform, mbox: PLATFORM_MBOX },
     verb:      { id: verb.id, display: { 'en-US': verb.display } },
     object:    { objectType: 'Activity', id: p.objectId, definition: { name: { 'en-US': p.label } } },
     timestamp: new Date().toISOString(),

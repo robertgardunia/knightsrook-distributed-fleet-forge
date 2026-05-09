@@ -8,8 +8,12 @@ export interface XApiStatement {
   context:   { platform: string; extensions: Record<string, unknown> };
 }
 
-// NOTE: AuthMethod / AuthPathConfig are temporary guests — they belong in a
-// future @knightsrook/auth package once real auth logic exists to justify it.
+// NOTE: AuthMethod / AuthPathConfig / TsnSeed are temporary guests — they belong
+// in a future @knightsrook/auth package once real auth logic exists to justify it.
+
+/** 16-char lowercase hex string — the canonical cross-system identity token. */
+export type TsnSeed = string;
+
 export type AuthMethod = 'qr' | 'moodle';
 // future: 'card' | 'pin' | 'sso'
 
