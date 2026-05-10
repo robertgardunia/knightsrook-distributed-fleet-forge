@@ -37,7 +37,7 @@ services:
     ports:
       - "5025:5020"
     networks: [fleet-net]
-    restart: unless-stopped
+    restart: "no"
 
   # ── Station S1 ────────────────────────────────────────────────────────────
   s1-controller:
@@ -54,7 +54,7 @@ services:
       - s1-controller-data:/app/data
     networks: [fleet-net, station-s1-net]
     depends_on: [homebase, chaos-proxy]
-    restart: unless-stopped
+    restart: "no"
 
   s1-game-1:
     container_name: s1-game-1
@@ -65,7 +65,7 @@ services:
     ports: ["18101:8080"]
     networks: [station-s1-net]
     depends_on: [s1-controller]
-    restart: unless-stopped
+    restart: "no"
 
   s1-game-2:
     container_name: s1-game-2
@@ -76,7 +76,7 @@ services:
     ports: ["18102:8080"]
     networks: [station-s1-net]
     depends_on: [s1-controller]
-    restart: unless-stopped
+    restart: "no"
 
   s1-game-3:
     container_name: s1-game-3
@@ -87,7 +87,7 @@ services:
     ports: ["18103:8080"]
     networks: [station-s1-net]
     depends_on: [s1-controller]
-    restart: unless-stopped
+    restart: "no"
 
   s1-game-4:
     container_name: s1-game-4
@@ -98,7 +98,7 @@ services:
     ports: ["18104:8080"]
     networks: [station-s1-net]
     depends_on: [s1-controller]
-    restart: unless-stopped
+    restart: "no"
 
   s1-info-1:
     container_name: s1-info-1
@@ -109,7 +109,7 @@ services:
     ports: ["18151:8080"]
     networks: [station-s1-net]
     depends_on: [s1-controller]
-    restart: unless-stopped
+    restart: "no"
 
   s1-info-2:
     container_name: s1-info-2
@@ -120,7 +120,7 @@ services:
     ports: ["18152:8080"]
     networks: [station-s1-net]
     depends_on: [s1-controller]
-    restart: unless-stopped
+    restart: "no"
 
   # ── Station S2 ────────────────────────────────────────────────────────────
   s2-controller:
@@ -137,7 +137,7 @@ services:
       - s2-controller-data:/app/data
     networks: [fleet-net, station-s2-net]
     depends_on: [homebase, chaos-proxy]
-    restart: unless-stopped
+    restart: "no"
 
   s2-game-1:
     container_name: s2-game-1
@@ -148,7 +148,7 @@ services:
     ports: ["18201:8080"]
     networks: [station-s2-net]
     depends_on: [s2-controller]
-    restart: unless-stopped
+    restart: "no"
 
   s2-game-2:
     container_name: s2-game-2
@@ -159,7 +159,7 @@ services:
     ports: ["18202:8080"]
     networks: [station-s2-net]
     depends_on: [s2-controller]
-    restart: unless-stopped
+    restart: "no"
 
   s2-game-3:
     container_name: s2-game-3
@@ -170,7 +170,7 @@ services:
     ports: ["18203:8080"]
     networks: [station-s2-net]
     depends_on: [s2-controller]
-    restart: unless-stopped
+    restart: "no"
 
   s2-game-4:
     container_name: s2-game-4
@@ -181,7 +181,7 @@ services:
     ports: ["18204:8080"]
     networks: [station-s2-net]
     depends_on: [s2-controller]
-    restart: unless-stopped
+    restart: "no"
 
   s2-info-1:
     container_name: s2-info-1
@@ -192,7 +192,7 @@ services:
     ports: ["18251:8080"]
     networks: [station-s2-net]
     depends_on: [s2-controller]
-    restart: unless-stopped
+    restart: "no"
 
   s2-info-2:
     container_name: s2-info-2
@@ -203,7 +203,7 @@ services:
     ports: ["18252:8080"]
     networks: [station-s2-net]
     depends_on: [s2-controller]
-    restart: unless-stopped
+    restart: "no"
 
   # ── Station S3 ────────────────────────────────────────────────────────────
   s3-controller:
@@ -220,7 +220,7 @@ services:
       - s3-controller-data:/app/data
     networks: [fleet-net, station-s3-net]
     depends_on: [homebase, chaos-proxy]
-    restart: unless-stopped
+    restart: "no"
 
   s3-game-1:
     container_name: s3-game-1
@@ -231,7 +231,7 @@ services:
     ports: ["18301:8080"]
     networks: [station-s3-net]
     depends_on: [s3-controller]
-    restart: unless-stopped
+    restart: "no"
 
   s3-game-2:
     container_name: s3-game-2
@@ -242,7 +242,7 @@ services:
     ports: ["18302:8080"]
     networks: [station-s3-net]
     depends_on: [s3-controller]
-    restart: unless-stopped
+    restart: "no"
 
   s3-game-3:
     container_name: s3-game-3
@@ -253,7 +253,7 @@ services:
     ports: ["18303:8080"]
     networks: [station-s3-net]
     depends_on: [s3-controller]
-    restart: unless-stopped
+    restart: "no"
 
   s3-game-4:
     container_name: s3-game-4
@@ -264,7 +264,7 @@ services:
     ports: ["18304:8080"]
     networks: [station-s3-net]
     depends_on: [s3-controller]
-    restart: unless-stopped
+    restart: "no"
 
   s3-info-1:
     container_name: s3-info-1
@@ -275,7 +275,7 @@ services:
     ports: ["18351:8080"]
     networks: [station-s3-net]
     depends_on: [s3-controller]
-    restart: unless-stopped
+    restart: "no"
 
   s3-info-2:
     container_name: s3-info-2
@@ -286,7 +286,7 @@ services:
     ports: ["18352:8080"]
     networks: [station-s3-net]
     depends_on: [s3-controller]
-    restart: unless-stopped
+    restart: "no"
 
   # ── Station S4 ────────────────────────────────────────────────────────────
   s4-controller:
@@ -303,7 +303,7 @@ services:
       - s4-controller-data:/app/data
     networks: [fleet-net, station-s4-net]
     depends_on: [homebase, chaos-proxy]
-    restart: unless-stopped
+    restart: "no"
 
   s4-game-1:
     container_name: s4-game-1
@@ -314,7 +314,7 @@ services:
     ports: ["18401:8080"]
     networks: [station-s4-net]
     depends_on: [s4-controller]
-    restart: unless-stopped
+    restart: "no"
 
   s4-game-2:
     container_name: s4-game-2
@@ -325,7 +325,7 @@ services:
     ports: ["18402:8080"]
     networks: [station-s4-net]
     depends_on: [s4-controller]
-    restart: unless-stopped
+    restart: "no"
 
   s4-game-3:
     container_name: s4-game-3
@@ -336,7 +336,7 @@ services:
     ports: ["18403:8080"]
     networks: [station-s4-net]
     depends_on: [s4-controller]
-    restart: unless-stopped
+    restart: "no"
 
   s4-game-4:
     container_name: s4-game-4
@@ -347,7 +347,7 @@ services:
     ports: ["18404:8080"]
     networks: [station-s4-net]
     depends_on: [s4-controller]
-    restart: unless-stopped
+    restart: "no"
 
   s4-info-1:
     container_name: s4-info-1
@@ -358,7 +358,7 @@ services:
     ports: ["18451:8080"]
     networks: [station-s4-net]
     depends_on: [s4-controller]
-    restart: unless-stopped
+    restart: "no"
 
   s4-info-2:
     container_name: s4-info-2
@@ -369,7 +369,7 @@ services:
     ports: ["18452:8080"]
     networks: [station-s4-net]
     depends_on: [s4-controller]
-    restart: unless-stopped
+    restart: "no"
 
   # ── Chaos Proxy (Toxiproxy) ───────────────────────────────────────────────
   chaos-proxy:
@@ -380,7 +380,7 @@ services:
     ports:
       - "8474:8474"
     networks: [fleet-net, station-s1-net, station-s2-net, station-s3-net, station-s4-net]
-    restart: unless-stopped
+    restart: "no"
 
   # ── Chaos Agent (Haiku gremlin) ───────────────────────────────────────────
   chaos-agent:
@@ -396,7 +396,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     networks: [fleet-net]
     depends_on: [homebase, chaos-proxy]
-    restart: unless-stopped
+    restart: "no"
 
 networks:
   fleet-net:
