@@ -143,23 +143,71 @@ const tools: Anthropic.Tool[] = [
 
 export async function runFireman(ctx: FiremanContext): Promise<void> {
   const { incidentId, nodeId, event, telemetry, fleetSnapshot, getNodeStatus, emit } = ctx;
-  const startMs   = Date.now();
-  const baseFault  = classifyFault(telemetry);
+  const startMs     = Date.now();
+  const baseFault   = classifyFault(telemetry);
   const nodeSummary = getNodeIncidentSummary(nodeId);
-  // If this node has failed ≥2 times in the last hour, treat it as endemic
-  // regardless of what the telemetry window shows for this incident alone.
-  const faultType  = nodeSummary.count >= 2 ? 'endemic' : baseFault;
-  const proxy      = nodeToProxy(nodeId);
-  const patterns   = getPatterns();
-
-  const model = patterns.some(p =>
-    p.faultSig.includes(nodeId) && p.successCount >= 3 &&
-    p.successCount / Math.max(1, p.successCount + p.failureCount) >= 0.8
-  ) ? 'claude-haiku-4-5-20251001' : 'claude-sonnet-4-6';
+  const faultType   = nodeSummary.count >= 2 ? 'endemic' : baseFault;
+  const proxy       = nodeToProxy(nodeId);
+  const patterns    = getPatterns();
+  const faultSig    = `${faultType}:${nodeId}`;
 
   openIncident(incidentId, nodeId, event);
-  emit('fireman:spawned', { incidentId, nodeId, event, faultType, model, priorCount: nodeSummary.count });
-  console.log(`[FIREMAN] ${incidentId} spawned model=${model} node=${nodeId} fault=${faultType}`);
+
+  const actions: IncidentAction[] = [];
+  let outcome: 'resolved' | 'escalated' | 'timeout' = 'timeout';
+  let finalNotes = '';
+
+  // ── Playbook fast path — no LLM call ──────────────────────────────────────
+  // If we have a high-confidence match for this exact fault signature, execute
+  // the known fix directly. Only fall through to the LLM if it fails to resolve.
+  const confident = patterns.find(p =>
+    p.faultSig === faultSig &&
+    p.successCount >= 3 &&
+    p.successCount / Math.max(1, p.successCount + p.failureCount) >= 0.8 &&
+    p.bestResponse !== 'wait'
+  );
+
+  if (confident) {
+    const rate   = Math.round(100 * confident.successCount / (confident.successCount + confident.failureCount));
+    const reason = `Playbook: "${confident.bestResponse}" — ${confident.successCount}✓ ${confident.failureCount}✗ ${rate}%`;
+    emit('fireman:spawned', { incidentId, nodeId, event, faultType, model: 'playbook', priorCount: nodeSummary.count });
+    emit('fireman:action',  { incidentId, nodeId, action: confident.bestResponse, reason, attempt: 1 });
+    actions.push({ action: confident.bestResponse, reason, ts: Date.now() });
+    console.log(`[FIREMAN] ${incidentId} playbook hit: ${reason}`);
+
+    if (confident.bestResponse === 'escalate') {
+      finalNotes = `Playbook: "${faultType}" on ${nodeId} consistently requires human intervention.`;
+      outcome    = 'escalated';
+      emit('fireman:escalated', { incidentId, nodeId, summary: finalNotes, severity: 'warning' });
+    } else {
+      if (confident.bestResponse === 'reset_network' && proxy) await resetNetwork(proxy);
+      else if (confident.bestResponse === 'restart_container')  await restartContainer(nodeId);
+
+      await new Promise(r => setTimeout(r, WAIT_AFTER_ACTION_MS));
+      const status = getNodeStatus(nodeId);
+      if (status === 'alive' || status === 'alerting') {
+        finalNotes = `Playbook resolved via "${confident.bestResponse}" (1 attempt).`;
+        outcome    = 'resolved';
+        emit('fireman:resolved', { incidentId, nodeId, durationMs: Date.now() - startMs });
+      } else {
+        console.log(`[FIREMAN] ${incidentId} playbook action did not resolve — falling through to LLM`);
+      }
+    }
+
+    if (outcome !== 'timeout') {
+      closeIncident(incidentId, outcome, Date.now() - startMs, actions, finalNotes, faultType);
+      recordPatternResult(faultSig, confident.bestResponse, outcome === 'resolved', Date.now() - startMs);
+      return;
+    }
+  }
+
+  // ── LLM path — novel situation, or playbook action failed ─────────────────
+  // Novel → Haiku. Playbook tried and failed → Sonnet (something unexpected).
+  const model = actions.length > 0 ? 'claude-sonnet-4-6' : 'claude-haiku-4-5-20251001';
+  if (!confident) {
+    emit('fireman:spawned', { incidentId, nodeId, event, faultType, model, priorCount: nodeSummary.count });
+  }
+  console.log(`[FIREMAN] ${incidentId} LLM path model=${model} node=${nodeId} fault=${faultType}`);
 
   const otherNodes = fleetSnapshot.nodes
     .filter(n => n.id !== nodeId && n.id !== 'homebase')
@@ -214,16 +262,15 @@ Fault classification guide:
   code     → CPU spike or hang pattern before death → restart_container
   endemic  → multiple deaths in short window → escalate immediately, do not loop
 
-Choose ONE action. If the playbook has a reliable response for this pattern, prefer it. Your reason field should reference the incident history — if this is a repeat failure, say so explicitly.`;
+${actions.length > 0
+  ? `NOTE: The playbook action "${actions[0].action}" was already attempted and did not resolve the incident. Do not repeat it. Diagnose independently.`
+  : `Choose ONE action. Your reason field should reference the incident history — if this is a repeat failure, say so explicitly.`
+}`;
 
   const client = new Anthropic();
   const messages: Anthropic.MessageParam[] = [
     { role: 'user', content: initialPrompt },
   ];
-
-  const actions: IncidentAction[] = [];
-  let outcome: 'resolved' | 'escalated' | 'timeout' = 'timeout';
-  let finalNotes = '';
 
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
     const response = await client.messages.create({
@@ -289,9 +336,8 @@ Choose ONE action. If the playbook has a reliable response for this pattern, pre
     console.log(`[FIREMAN] ${incidentId} TIMEOUT — escalating`);
   }
 
-  const durationMs   = Date.now() - startMs;
-  const lastAction   = actions.at(-1)?.action ?? 'none';
-  const faultSig     = `${faultType}:${nodeId}`;
+  const durationMs = Date.now() - startMs;
+  const lastAction = actions.at(-1)?.action ?? 'none';
 
   closeIncident(incidentId, outcome, durationMs, actions, finalNotes, faultType);
   recordPatternResult(faultSig, lastAction, outcome === 'resolved', durationMs);
