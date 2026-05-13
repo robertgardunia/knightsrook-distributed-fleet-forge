@@ -1,8 +1,6 @@
 import { io } from 'socket.io-client';
 import { buildStatement, MemQueue, ACTIVITY_BASE } from '@knightsrook/xapi';
-import { CodeCaptureService } from './lib/codeCapture.js';
-import { attachHardwareScanner } from './lib/adapters/hardwareScanner.js';
-import { attachControlInput } from './lib/adapters/controlInput.js';
+import { CodeCaptureService } from '@knightsrook/codes/catcher';
 
 const AGENT_ID     = process.env.AGENT_ID!;
 const AGENT_NAME   = process.env.AGENT_NAME!;
@@ -38,6 +36,10 @@ setInterval(() => {
   if (socket.connected) socket.emit('agent:heartbeat', { id: AGENT_ID });
 }, HEARTBEAT_MS);
 
+// ── Code capture service ─────────────────────────────────────────────────────
+
+const codeCapture = new CodeCaptureService();
+
 // ── xAPI queue ───────────────────────────────────────────────────────────────
 
 const xapiQueue = new MemQueue();
@@ -50,7 +52,7 @@ function xapi(
   label:     string,
   ext:       Record<string, unknown> = {},
 ): void {
-  if (!emulating) return;
+  if (!codeCapture.current()) return;
   const stmt = buildStatement({ actorName, actorId, verbKey, objectId, label, nodeId: AGENT_ID, ext });
   if (socket.connected && lrsEnabled) {
     socket.emit('xapi:statement', stmt);
@@ -101,12 +103,12 @@ socket.on('kiosk:emulate:stop', ({ nodeId }: { nodeId: string }) => {
   scheduleArrival();
 });
 
-// ── Code capture service ──────────────────────────────────────────────────────
-
-const codeCapture = new CodeCaptureService();
-
-attachHardwareScanner(codeCapture);
-attachControlInput(codeCapture, socket, AGENT_ID);
+// Hardware adapter: real card reader / HID scanner feeds codeCapture.capture(code)
+// Demo adapter: monitoring control flow → kiosk:scan → capture
+socket.on('kiosk:scan', ({ nodeId, data }: { nodeId: string; data: string }) => {
+  if (nodeId !== AGENT_ID) return;
+  codeCapture.capture(data);
+});
 
 codeCapture.on('user:identified', (code: string) => {
   if (!emulating) return;

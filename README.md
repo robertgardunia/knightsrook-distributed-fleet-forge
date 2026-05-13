@@ -201,7 +201,7 @@ Each station-controller runs a relay (`containers/station-controller/`) that con
 
 Game kiosks (`containers/game-kiosk/`) run Chromium (headless, SwiftShader software WebGL) loading HexGL on port 8080: title screen → INSERT COIN attract cycle → pre-recorded replay. Info kiosks (`containers/info-kiosk/`) run Chromium loading a slideshow of simulator guide slides. Both kiosk containers are fully autonomous — they boot and run independently of the fleet monitor; if upstream connectivity is lost the game/slideshow continues. Docker stats reflect real Chromium CPU/memory from rendering the live application. The dashboard's Screen view is a separate operator viewport. In Online Lab mode, both game kiosks and info kiosks show a live iframe of their nginx-served page (game kiosks: `http://localhost:181xx`, info kiosks: `http://localhost:181x5x`). In Offline Demo mode, game kiosks show a static HexGL screenshot and info kiosks cycle through simulator slide images. Mute/audio toggle on the Screen view controls the dashboard iframe, not the kiosk container.
 
-**Code capture service** — Every kiosk agent runs a `CodeCaptureService` (`lib/codeCapture.ts`) that manages a single active-identity slot. An adapter registers the input source; all adapters call `service.capture(code)` and `service.clear()` — the service itself is source-agnostic. Two adapters ship: `adapters/hardwareScanner.ts` (stub, for a physical card reader or HID barcode scanner) and `adapters/controlInput.ts` (wires `kiosk:scan` from the monitoring control flow). When a code is captured the service emits `user:identified`; when the slot is cleared (operator releases control, or a new code displaces the previous one) it emits `user:cleared`. The kiosk agent drives `signIn` / `signOut` from those events. This is scaffolded as a future `@knightsrook/codes/catcher` package — extraction mirrors `@knightsrook/xapi`.
+**Code capture service** — Every kiosk agent imports `CodeCaptureService` from `@knightsrook/codes/catcher`. The service manages a single active-identity slot: `capture(code)` sets it and emits `user:identified`; `clear()` empties it and emits `user:cleared`. The kiosk agent drives `signIn` / `signOut` from those events. Input wiring is the container's responsibility — real hardware (card reader, HID scanner) calls `capture()` directly; the demo adapter wires `kiosk:scan` from the monitoring control flow. xAPI statements only fire when the slot is occupied (`codeCapture.current()` non-null); auto-sim activity is never recorded.
 
 Each kiosk agent independently simulates activity for the Logs tab: game kiosks log `SIGNIN / GAME_START / LAP_COMPLETE / GAME_OVER / SIGNOUT`; info kiosks log `VISITOR_ARRIVE / SLIDE_VIEW / QR_SCAN / VISITOR_DEPART`. Both also emit xAPI-format statements (`verb=launched`, `verb=progressed`, `verb=completed`, `verb=exited`, `verb=experienced`, `verb=interacted`) alongside each event — groundwork for routing xAPI and system telemetry up the chain. All output is streamed to the Logs tab via docker logs. Both use a two-stage Docker build: TypeScript compiles in stage 1, the runtime stage installs production `node_modules` separately so the fleet agent has `socket.io-client` available. Nginx serves kiosk HTML using the `index` directive (not a redirect) to avoid nginx leaking the internal container port (8080) in Location headers when accessed via host-mapped ports.
 
@@ -296,14 +296,14 @@ The container tsconfigs have `paths` entries pointing to `../../packages/xapi/sr
 -    }
 ```
 
-## Planned: `@knightsrook/codes`
+## `@knightsrook/codes` (`packages/codes/`)
 
-The `CodeCaptureService` (`containers/game-kiosk/lib/codeCapture.ts`) and its adapters are scaffolded for extraction into a dedicated workspace package (`@knightsrook/codes`). Both `game-kiosk` and `info-kiosk` will install it. The package will have two entry points:
+Code identity package — two entry points:
 
-- `@knightsrook/codes/catcher` — runtime kiosk-side identity slot + adapters
-- `@knightsrook/codes/batcher` — admin utility: query Moodle for pending accounts, generate printable card assets
+- **`@knightsrook/codes/catcher`** — `CodeCaptureService`: active-identity slot, `capture(code)` / `clear()`, emits `user:identified` / `user:cleared`. No adapter code — the container wires its own input sources. Runs in every kiosk agent.
+- **`@knightsrook/codes/batcher`** — `CodeBatcher`: requests pending-account codes from Moodle (`requestCodes`), falls back to offline generation (`generateOfflineCode`: SHA-256 of `kioskId:timestamp:entropy`, first 16 hex chars — valid TSN seed format). Offline-generated codes are queued to a file-backed `OfflineQueue` and synced to Moodle when connectivity returns (`sync()`). Moodle creates pending accounts from those codes; if a user registers with the code, the account activates and links to their xAPI history.
 
-Extraction steps mirror those for `@knightsrook/xapi`.
+Moodle API (`moodleClient.ts`) is stubbed — actual `wsfunction` names require a custom Moodle plugin (`local_knightsrook_*`). Extraction to its own repo mirrors `@knightsrook/xapi`.
 
 ## Planned: `@knightsrook/auth`
 

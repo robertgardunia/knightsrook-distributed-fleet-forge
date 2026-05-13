@@ -1,0 +1,19 @@
+{
+  "name": "@knightsrook/codes",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc"
+  },
+  "description": "Code capture (kiosk identity slot) and code batching (Moodle account requests + offline fallback).",
+  "exports": {
+    ".": "./src/index.ts",
+    "./catcher": "./src/catcher.ts",
+    "./batcher": "./src/batcher.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.40",
+    "typescript": "^5.9.3"
+  }
+}

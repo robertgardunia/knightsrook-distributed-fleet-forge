@@ -8,8 +8,11 @@
     "esModuleInterop": true,
     "paths": {
       "@knightsrook/xapi": ["../../packages/xapi/src/index.ts"],
-      "@knightsrook/xapi/*": ["../../packages/xapi/src/*.ts"]
+      "@knightsrook/xapi/*": ["../../packages/xapi/src/*.ts"],
+      "@knightsrook/codes": ["../../packages/codes/src/index.ts"],
+      "@knightsrook/codes/catcher": ["../../packages/codes/src/catcher.ts"],
+      "@knightsrook/codes/batcher": ["../../packages/codes/src/batcher.ts"]
     }
   },
-  "include": ["agent.ts", "lib/**/*.ts"]
+  "include": ["agent.ts"]
 }
