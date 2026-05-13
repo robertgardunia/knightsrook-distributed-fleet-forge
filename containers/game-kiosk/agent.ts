@@ -1,5 +1,8 @@
 import { io } from 'socket.io-client';
 import { buildStatement, MemQueue, ACTIVITY_BASE } from '@knightsrook/xapi';
+import { CodeCaptureService } from './lib/codeCapture.js';
+import { attachHardwareScanner } from './lib/adapters/hardwareScanner.js';
+import { attachControlInput } from './lib/adapters/controlInput.js';
 
 const AGENT_ID     = process.env.AGENT_ID!;
 const AGENT_NAME   = process.env.AGENT_NAME!;
@@ -93,14 +96,26 @@ socket.on('kiosk:emulate:start', ({ nodeId }: { nodeId: string }) => {
 socket.on('kiosk:emulate:stop', ({ nodeId }: { nodeId: string }) => {
   if (nodeId !== AGENT_ID) return;
   emulating = false;
+  codeCapture.clear();
   console.log(`[${AGENT_ID}] emulation ended — resuming auto-sim`);
   scheduleArrival();
 });
 
-socket.on('kiosk:scan', ({ nodeId, data }: { nodeId: string; data: string }) => {
-  if (nodeId !== AGENT_ID || !emulating) return;
-  console.log(`[${AGENT_ID}] scanned: ${data}`);
-  signIn(data);
+// ── Code capture service ──────────────────────────────────────────────────────
+
+const codeCapture = new CodeCaptureService();
+
+attachHardwareScanner(codeCapture);
+attachControlInput(codeCapture, socket, AGENT_ID);
+
+codeCapture.on('user:identified', (code: string) => {
+  if (!emulating) return;
+  console.log(`[${AGENT_ID}] code captured: ${code}`);
+  signIn(code);
+});
+
+codeCapture.on('user:cleared', () => {
+  if (currentPlayer) signOut('displaced');
 });
 
 // ── Player simulation ────────────────────────────────────────────────────────

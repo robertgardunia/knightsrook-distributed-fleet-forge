@@ -11,5 +11,5 @@
       "@knightsrook/xapi/*": ["../../packages/xapi/src/*.ts"]
     }
   },
-  "include": ["agent.ts"]
+  "include": ["agent.ts", "lib/**/*.ts"]
 }
