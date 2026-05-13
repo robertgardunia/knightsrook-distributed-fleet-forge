@@ -93,9 +93,9 @@ Three fixed overlays provide real-time narrative visibility during Online Lab mo
 | **Fireman panel** | Bottom-right | Incidents grouped by ID: fault type → action steps → outcome. Escalations shown in red with ACK button. |
 | **Playbook panel** | Bottom-left | Accumulated fault patterns with success rate bar (green ≥80%, yellow ≥50%, red below). Refreshes every 10s. Hidden until first incident resolves. |
 
-**Auth path config** — `packages/xapi/src/authPaths.ts` defines which sign-in methods are available at each node role (`game-kiosk` allows `qr` and `moodle`; `info-kiosk` allows `qr` only; controllers and homebase have none). `EmulatePanel` imports `getAuthConfig` from `@knightsrook/xapi` to decide which options to present — a node with multiple methods shows a picker first, single-method nodes go straight to that flow. Future: agent-side enforcement will mirror the same config. Add new methods (`card`, `pin`, `sso`) to the `AuthMethod` union and the relevant role entries.
+**Auth path config** — `packages/xapi/src/authPaths.ts` defines which capture methods are available at each node role (`game-kiosk` and `info-kiosk` use `qr`; controllers and homebase have none). DFF does not handle authentication — identity is an opaque code captured at the kiosk and passed as-is to the xAPI pipeline. Future input methods (`card`, `pin`) go in the `AuthMethod` union and the relevant role entries.
 
-**Take Control / Emulate User** — Screen tab on any kiosk node (Online Lab only) shows a "Control" button. Clicking it pauses the kiosk's auto-simulation, opens the host camera via `getUserMedia`, and generates a temp-ID QR code. Scan the QR with any device (or the system camera aimed at the screen), or press "Skip" to use the ID directly. The kiosk agent receives the scanned identity via `kiosk:scan`, starts a real xAPI session under that actor, and all subsequent events flow through the cascade pipeline. "Release" hands control back to the simulation. Relay chain: dashboard → homebase broadcast → station controller (filters by kiosk ID) → kiosk agent. xAPI statements are generated only during emulate mode (not during auto-sim).
+**Take Control / Emulate User** — Screen tab on any kiosk node (Online Lab only) shows a "Control" button. Clicking it pauses the kiosk's auto-simulation and opens the "Get Started" UI: the operator can scan a QR code from a physical card using the host camera, or type a code manually. A "Skip — use demo id" button supplies a generated code for demo purposes when no real card is available. The kiosk agent receives the captured identity via `kiosk:scan`, starts a real xAPI session under that actor, and all subsequent events flow through the cascade pipeline. "Release" hands control back to the simulation. Relay chain: dashboard → homebase broadcast → station controller (filters by kiosk ID) → kiosk agent. xAPI statements are generated only when a code is active (not during auto-sim). In Offline Demo mode the pipeline is cosmetic — no LRS is connected and nothing is relayed.
 
 **xAPI LRS toggle** — A compact toggle appears in the header whenever Online Lab is connected. Default is OFF. The `xapi:lrs:set` signal cascades through the entire fleet: homebase broadcasts it to station controllers, station controllers relay it down to kiosks. With the toggle OFF, every tier queues locally — kiosks hold statements in memory, station controllers accumulate a JSONL file, homebase accumulates its own JSONL file. Flip it ON and the cascade drains in order: kiosks flush to station controllers, station controllers flush to homebase, homebase flushes to Learning Locker. The badge in the header shows the homebase queue depth. Each tier also reports its own queue depth via `xapi:queue:size` every 5s.
 
@@ -296,16 +296,21 @@ The container tsconfigs have `paths` entries pointing to `../../packages/xapi/sr
 -    }
 ```
 
+## Planned: `@knightsrook/codes`
+
+The `CodeCaptureService` (`containers/game-kiosk/lib/codeCapture.ts`) and its adapters are scaffolded for extraction into a dedicated workspace package (`@knightsrook/codes`). Both `game-kiosk` and `info-kiosk` will install it. The package will have two entry points:
+
+- `@knightsrook/codes/catcher` — runtime kiosk-side identity slot + adapters
+- `@knightsrook/codes/batcher` — admin utility: query Moodle for pending accounts, generate printable card assets
+
+Extraction steps mirror those for `@knightsrook/xapi`.
+
 ## Planned: `@knightsrook/auth`
 
-`AuthMethod`, `AuthPathConfig`, and `authPaths.ts` currently live in `@knightsrook/xapi` for convenience but are logically unrelated to xAPI tracking. When real auth is implemented (Moodle credential validation, card reader, etc.) these should move to a dedicated `packages/auth` workspace package (`@knightsrook/auth`).
+`AuthMethod`, `AuthPathConfig`, and `authPaths.ts` currently live in `@knightsrook/xapi` for convenience but are logically unrelated to xAPI tracking. When real input-method configuration is needed (card reader, PIN, etc.) these should move to a dedicated `packages/auth` workspace package (`@knightsrook/auth`).
 
 What belongs there when the time comes:
 - `AuthMethod` / `AuthPathConfig` / `NodeRole` types (from `packages/xapi/src/types.ts`)
 - `AUTH_PATHS` / `getAuthConfig` (from `packages/xapi/src/authPaths.ts`)
-- Moodle API client + credential validation
-- Any shared session token / auth middleware logic
 
 Extraction steps mirror those for `@knightsrook/xapi` above. Until then, the types and config are re-exported from `@knightsrook/xapi` and the misplacement is annotated in source.
-
-Similarly for `server/tsconfig.json` if paths were added there.

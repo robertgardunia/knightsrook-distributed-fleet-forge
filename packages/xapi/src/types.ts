@@ -14,7 +14,7 @@ export interface XApiStatement {
 /** 16-char lowercase hex string — the canonical cross-system identity token. */
 export type TsnSeed = string;
 
-export type AuthMethod = 'qr' | 'moodle';
+export type AuthMethod = 'qr';
 // future: 'card' | 'pin' | 'sso'
 
 export type NodeRole = 'homebase' | 'station-controller' | 'game-kiosk' | 'info-kiosk';

@@ -14,7 +14,7 @@ export const AUTH_PATHS: Record<NodeRole, AuthPathConfig> = {
     allowAnonymous: true,
   },
   'game-kiosk': {
-    methods:        ['qr', 'moodle'] as AuthMethod[],
+    methods:        ['qr'] as AuthMethod[],
     allowAnonymous: false,
   },
   'info-kiosk': {
