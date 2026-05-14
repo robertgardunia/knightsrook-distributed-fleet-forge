@@ -301,7 +301,7 @@ The container tsconfigs have `paths` entries pointing to `../../packages/xapi/sr
 Code identity package — two entry points:
 
 - **`@knightsrook/codes/catcher`** — `CodeCaptureService`: active-identity slot, `capture(code)` / `clear()`, emits `user:identified` / `user:cleared`. No adapter code — the container wires its own input sources. Runs in every kiosk agent.
-- **`@knightsrook/codes/batcher`** — `CodeBatcher`: requests pending-account codes from Moodle (`requestCodes`), falls back to offline generation (`generateOfflineCode`: SHA-256 of `kioskId:timestamp:entropy`, first 16 hex chars — valid TSN seed format). Offline-generated codes are queued to a file-backed `OfflineQueue` and synced to Moodle when connectivity returns (`sync()`). Moodle creates pending accounts from those codes; if a user registers with the code, the account activates and links to their xAPI history.
+- **`@knightsrook/codes/batcher`** — `CodeBatcher`: requests `PendingAccount[]` from Moodle (`requestAccounts`) — each carries `{ code, email, name }`. `code` is the temp LRS identity (mbox key); `email`/`name` drive Moodle's code delivery and future LRS reconciliation (an updater re-assigns xAPI records from the temp mbox to the real Moodle user once registration completes). Falls back to offline generation when Moodle is unreachable (`email`/`name` default to `null`). Offline accounts queued to file-backed `OfflineQueue`, synced to Moodle on reconnect.
 
 Moodle API (`moodleClient.ts`) is stubbed — actual `wsfunction` names require a custom Moodle plugin (`local_knightsrook_*`). Extraction to its own repo mirrors `@knightsrook/xapi`.
 

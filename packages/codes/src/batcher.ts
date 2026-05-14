@@ -1,6 +1,8 @@
 import { generateOfflineCode } from './codeGen.js';
 import { OfflineQueue } from './offlineQueue.js';
-import { requestCodes, syncOfflineCodes, type MoodleConfig } from './moodleClient.js';
+import { requestAccounts, syncOfflineAccounts, type MoodleConfig, type PendingAccount } from './moodleClient.js';
+
+export type { PendingAccount };
 
 export interface BatcherConfig {
   kioskId:   string;
@@ -17,21 +19,24 @@ export class CodeBatcher {
     this.queue  = new OfflineQueue(config.queuePath);
   }
 
-  async getCodes(count: number): Promise<string[]> {
+  // Returns pending accounts. Each account's code is the temp LRS identity.
+  // email/name (when present) are used by Moodle to email the code to the user
+  // and by the LRS updater to reconcile xAPI records to the real account later.
+  async getAccounts(count: number): Promise<PendingAccount[]> {
     if (this.config.moodle) {
       try {
-        return await requestCodes(this.config.moodle, this.config.kioskId, count);
+        return await requestAccounts(this.config.moodle, this.config.kioskId, count);
       } catch {
         // Moodle unreachable — fall through to offline generation
       }
     }
-    const codes: string[] = [];
+    const accounts: PendingAccount[] = [];
     for (let i = 0; i < count; i++) {
       const code = generateOfflineCode(this.config.kioskId);
-      codes.push(code);
-      this.queue.push({ code, kioskId: this.config.kioskId, generatedAt: Date.now() });
+      accounts.push({ code, email: null, name: null });
+      this.queue.push({ code, kioskId: this.config.kioskId, generatedAt: Date.now(), email: null, name: null });
     }
-    return codes;
+    return accounts;
   }
 
   async sync(): Promise<void> {
@@ -39,7 +44,7 @@ export class CodeBatcher {
     const pending = this.queue.drain();
     if (pending.length === 0) return;
     try {
-      await syncOfflineCodes(this.config.moodle, pending);
+      await syncOfflineAccounts(this.config.moodle, pending);
     } catch {
       // Put them back — sync will retry next time
       pending.forEach(e => this.queue.push(e));
