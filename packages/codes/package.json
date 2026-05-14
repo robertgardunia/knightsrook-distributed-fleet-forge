@@ -4,7 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "tsc"
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "description": "Code capture (kiosk identity slot) and code batching (Moodle account requests + offline fallback).",
   "exports": {
@@ -14,6 +16,7 @@
   },
   "devDependencies": {
     "@types/node": "^20.19.40",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.0"
   }
 }

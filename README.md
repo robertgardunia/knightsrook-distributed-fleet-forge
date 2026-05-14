@@ -180,6 +180,18 @@ The chaos API (`/api/chaos/start|stop`) always routes through the Vite proxy to 
 
 > **Windows note:** `windowsHide: true` is set on the chaos `docker compose` spawn to prevent a CLI window flashing on screen. Vite proxy targets use `127.0.0.1` instead of `localhost` to avoid the IPv6/IPv4 mismatch in Node 18+ on Windows.
 
+## Tests
+
+```bash
+# Server (playbook, fleetRegistry, telemetry) — 32 tests
+cd server && npm test
+
+# @knightsrook/codes (CodeCaptureService, generateOfflineCode) — 16 tests
+cd packages/codes && npm test
+```
+
+The pre-commit hook runs `npm test` in the server package automatically. The codes package tests run independently.
+
 ## Docker
 
 ```bash
