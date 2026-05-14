@@ -41,15 +41,20 @@ export default function FiremanPanel() {
       setEvents(prev => [ev, ...prev].slice(0, 150));
     }
 
-    socket.on('fireman:spawned',   d => push('spawned',   d));
-    socket.on('fireman:action',    d => push('action',    d));
-    socket.on('fireman:resolved',  d => push('resolved',  d));
-    socket.on('fireman:escalated', d => push('escalated', d));
+    const onSpawned   = (d: Record<string, unknown>) => push('spawned',   d);
+    const onAction    = (d: Record<string, unknown>) => push('action',    d);
+    const onResolved  = (d: Record<string, unknown>) => push('resolved',  d);
+    const onEscalated = (d: Record<string, unknown>) => push('escalated', d);
+
+    socket.on('fireman:spawned',   onSpawned);
+    socket.on('fireman:action',    onAction);
+    socket.on('fireman:resolved',  onResolved);
+    socket.on('fireman:escalated', onEscalated);
     return () => {
-      socket.off('fireman:spawned');
-      socket.off('fireman:action');
-      socket.off('fireman:resolved');
-      socket.off('fireman:escalated');
+      socket.off('fireman:spawned',   onSpawned);
+      socket.off('fireman:action',    onAction);
+      socket.off('fireman:resolved',  onResolved);
+      socket.off('fireman:escalated', onEscalated);
     };
   }, []);
 

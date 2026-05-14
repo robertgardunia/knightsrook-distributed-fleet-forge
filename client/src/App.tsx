@@ -12,6 +12,8 @@ import StatsPanel from './components/StatsPanel';
 import ScreenPanel from './components/ScreenPanel';
 import AnimationController from './components/AnimationController';
 import ActivityPanel from './components/ActivityPanel';
+import FiremanPanel from './components/FiremanPanel';
+import PlaybookPanel from './components/PlaybookPanel';
 import type { FleetGraph as FleetGraphData, FleetNode } from './types/fleet';
 
 const ROLE_LABEL: Record<string, string> = {
@@ -595,6 +597,8 @@ export default function App() {
         </div>
       )}
       <AnimationController />
+      {labConnected && <FiremanPanel />}
+      {labConnected && <PlaybookPanel apiBase={LAB_SERVER} />}
     </div>
   );
 }
