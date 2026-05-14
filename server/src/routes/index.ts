@@ -9,6 +9,9 @@ type EmitFn = (event: string, ...args: unknown[]) => void;
 let _emit: EmitFn = () => {};
 export function setEmit(fn: EmitFn) { _emit = fn; }
 
+let chaosAutoEnabled = false;
+export function getChaosAutoEnabled(): boolean { return chaosAutoEnabled; }
+
 // Project root is one level up from the server/ directory.
 const projectRoot = path.resolve(process.cwd(), '..');
 
@@ -62,6 +65,16 @@ export function createRouter(registry: FleetRegistry) {
   router.post('/chaos/trigger', (_req, res) => {
     _emit('chaos:trigger');
     res.json({ success: true });
+  });
+
+  router.get('/chaos/auto', (_req, res) => {
+    res.json({ enabled: chaosAutoEnabled });
+  });
+
+  router.post('/chaos/auto/toggle', (_req, res) => {
+    chaosAutoEnabled = !chaosAutoEnabled;
+    _emit('chaos:auto', { enabled: chaosAutoEnabled, at: Date.now() });
+    res.json({ enabled: chaosAutoEnabled });
   });
 
   router.post('/chaos/stop', (_req, res) => {

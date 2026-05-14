@@ -7,7 +7,7 @@ import { FleetRegistry } from './lib/fleetRegistry.js';
 import { streamLogs, openShell, type ShellHandle, streamStats, type NodeStats } from './lib/containerStreams.js';
 import { recordStats, recordEvent } from './lib/telemetry.js';
 import { Dispatcher } from './lib/dispatcher.js';
-import { setEmit } from './routes/index.js';
+import { setEmit, getChaosAutoEnabled } from './routes/index.js';
 import { relay as relayXapi, setLrsEnabled, getLrsStatus, flushQueue } from './lib/xapiRelay.js';
 
 const PORT     = Number(process.env.PORT) || 5020;
@@ -58,6 +58,7 @@ io.on('connection', (socket) => {
   socket.on('agent:heartbeat', (data) => registry.heartbeat(data.id));
 
   // ── Chaos agent visibility — relay to all dashboard clients ────────────────
+  socket.emit('chaos:auto', { enabled: getChaosAutoEnabled(), at: Date.now() });
   socket.on('chaos:action', (data) => io.emit('chaos:action', data));
 
   // ── xAPI relay — receive from station controllers, POST to Learning Locker ──

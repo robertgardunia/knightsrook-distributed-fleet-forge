@@ -108,6 +108,7 @@ export default function App() {
   const [vSplit, setVSplit] = useState(50); // top row %
   const [labConnected, setLabConnected] = useState(false);
   const [chaosFiring, setChaosFiring] = useState(false);
+  const [chaosAutoEnabled, setChaosAutoEnabled] = useState(false);
   const [activityKey, setActivityKey] = useState(0);
   const [xapiStatus, setXapiStatus] = useState<{ enabled: boolean; queued: number } | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -192,6 +193,12 @@ export default function App() {
     const onStatus = (s: { enabled: boolean; queued: number }) => setXapiStatus(s);
     socket.on('xapi:lrs:status', onStatus);
     return () => { socket.off('xapi:lrs:status', onStatus); };
+  }, []);
+
+  useEffect(() => {
+    const onAuto = ({ enabled }: { enabled: boolean }) => setChaosAutoEnabled(enabled);
+    socket.on('chaos:auto', onAuto);
+    return () => { socket.off('chaos:auto', onAuto); };
   }, []);
 
   // On mode change: reconnect socket to the right server, clear stale graph.
@@ -369,35 +376,52 @@ export default function App() {
             </button>
           )}
 
-          {/* Trigger chaos — only when lab socket is live */}
+          {/* Chaos auto toggle + manual trigger — only when lab socket is live */}
           {labConnected && !isForging && (
-            <button
-              disabled={chaosFiring}
-              onClick={() => {
-                if (chaosGuard.current) return;
-                chaosGuard.current = true;
-                setChaosFiring(true);
-                // Must hit the homebase container directly — chaos agent is connected
-                // to homebase:5020 (container), not the host dev server socket.io
-                fetch(`${LAB_SERVER}/api/chaos/trigger`, { method: 'POST' })
-                  .finally(() => setTimeout(() => {
-                    chaosGuard.current = false;
-                    setChaosFiring(false);
-                  }, 3000));
-              }}
-              title="Trigger one chaos cycle now"
-              style={{
-                background: chaosFiring ? '#2d0f0f' : '#1a0a0a',
-                border: '1px solid #7f1d1d',
-                color: chaosFiring ? '#f87171' : '#fca5a5',
-                padding: '4px 11px', fontSize: '0.65rem',
-                cursor: chaosFiring ? 'default' : 'pointer',
-                borderRadius: 2, letterSpacing: '0.08em', marginRight: 4,
-                transition: 'all 0.15s ease',
-              }}
-            >
-              {chaosFiring ? '⚡ firing…' : '⚡ Chaos'}
-            </button>
+            <>
+              <button
+                onClick={() => fetch(`${LAB_SERVER}/api/chaos/auto/toggle`, { method: 'POST' })}
+                title={chaosAutoEnabled ? 'Disable automatic chaos loop' : 'Enable automatic chaos loop'}
+                style={{
+                  background: chaosAutoEnabled ? '#1c1200' : '#0d1117',
+                  border: `1px solid ${chaosAutoEnabled ? '#854d0e' : '#334155'}`,
+                  color: chaosAutoEnabled ? '#fbbf24' : '#475569',
+                  padding: '4px 10px', fontSize: '0.65rem',
+                  cursor: 'pointer',
+                  borderRadius: 2, letterSpacing: '0.08em', marginRight: 2,
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                {chaosAutoEnabled ? '● Auto' : '○ Auto'}
+              </button>
+              <button
+                disabled={chaosFiring}
+                onClick={() => {
+                  if (chaosGuard.current) return;
+                  chaosGuard.current = true;
+                  setChaosFiring(true);
+                  // Must hit the homebase container directly — chaos agent is connected
+                  // to homebase:5020 (container), not the host dev server socket.io
+                  fetch(`${LAB_SERVER}/api/chaos/trigger`, { method: 'POST' })
+                    .finally(() => setTimeout(() => {
+                      chaosGuard.current = false;
+                      setChaosFiring(false);
+                    }, 3000));
+                }}
+                title="Trigger one chaos cycle now"
+                style={{
+                  background: chaosFiring ? '#2d0f0f' : '#1a0a0a',
+                  border: '1px solid #7f1d1d',
+                  color: chaosFiring ? '#f87171' : '#fca5a5',
+                  padding: '4px 11px', fontSize: '0.65rem',
+                  cursor: chaosFiring ? 'default' : 'pointer',
+                  borderRadius: 2, letterSpacing: '0.08em', marginRight: 4,
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                {chaosFiring ? '⚡ firing…' : '⚡ Chaos'}
+              </button>
+            </>
           )}
 
           {/* Nav items */}

@@ -38,6 +38,7 @@ const MIN_MS    = Number(process.env.MIN_INTERVAL_MS ?? 30_000);
 const MAX_MS    = Number(process.env.MAX_INTERVAL_MS ?? 120_000);
 
 let fleetGraph: FleetGraph | null = null;
+let autoEnabled = false;
 
 // Per-station action history — keyed by station ID ("s1", "s2", ...)
 const stationHistory = new Map<string, string[]>();
@@ -281,7 +282,7 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
   // Broadcast to dashboard clients before executing
   const target = (input.container ?? input.station ?? '') as string;
   if (name !== 'observe') {
-    socket.emit('chaos:action', { tool: name, target, reason });
+    socket.emit('chaos:action', { tool: name, target, reason, source: 'chaos', at: Date.now() });
   }
 
   switch (name) {
@@ -386,13 +387,17 @@ async function chaosLoop(): Promise<void> {
   await new Promise(r => setTimeout(r, 15_000));
 
   while (true) {
-    try {
-      await runWithLock(false);
-    } catch (err) {
-      console.error('[HAIKU] step error:', err);
+    if (autoEnabled) {
+      try {
+        await runWithLock(false);
+      } catch (err) {
+        console.error('[HAIKU] step error:', err);
+      }
     }
-    const delay = rand(MIN_MS, MAX_MS);
-    console.log(`[HAIKU] next action in ${Math.round(delay / 1000)}s`);
+    const delay = autoEnabled ? rand(MIN_MS, MAX_MS) : 10_000;
+    console.log(autoEnabled
+      ? `[HAIKU] next action in ${Math.round(delay / 1000)}s`
+      : '[HAIKU] auto disabled — checking again in 10s');
     await new Promise(r => setTimeout(r, delay));
   }
 }
@@ -414,6 +419,10 @@ async function runWithLock(forced: boolean): Promise<void> {
 let started = false;
 const socket = io(FLEET_URL, { reconnectionDelay: 5000 });
 socket.on('fleet:graph', (data: FleetGraph) => { fleetGraph = data; });
+socket.on('chaos:auto', ({ enabled }: { enabled: boolean }) => {
+  autoEnabled = enabled;
+  console.log(`[HAIKU] auto loop ${enabled ? 'enabled' : 'disabled'}`);
+});
 socket.on('disconnect', () => { fleetGraph = null; });
 socket.on('connect', () => {
   console.log('[HAIKU] connected to fleet at', FLEET_URL);
