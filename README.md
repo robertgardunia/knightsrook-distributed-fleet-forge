@@ -30,6 +30,9 @@ Distributed Fleet Forge: A containerized chaos lab where sovereign-tier kiosk fl
 | `xapi:lrs:status` | server → client | `{ enabled: boolean; queued: number }` — homebase LRS state + queue depth; sent on connect, on every toggle, and every 30s |
 | `xapi:queue:size` | kiosk/controller → homebase | `{ nodeId, queued }` — per-node queue depth; emitted every 5s and on change; station controllers relay kiosk sizes upstream and report their own |
 | `xapi:queues` | server → client | `Record<nodeId, queued>` — fleet-wide queue snapshot; broadcast whenever any node reports a size change |
+| `chaos:trigger` | client → server → chaos-agent | Fire one forced chaos cycle immediately (ignores auto state) |
+| `chaos:action` | chaos-agent → server → client | `{ tool, target, reason, source: 'chaos', at }` — fault injected by the chaos agent; `source` and `at` distinguish chaos faults from organic failures |
+| `chaos:auto` | server → client, server → chaos-agent | `{ enabled: boolean; at: number }` — chaos auto-loop state; sent to every new connection and on toggle |
 | `kiosk:emulate:start` | client → homebase → controller → kiosk | Pause kiosk auto-sim and hand control to dashboard |
 | `kiosk:emulate:stop` | client → homebase → controller → kiosk | Resume kiosk auto-sim |
 | `kiosk:emulate:ready` | kiosk → controller → homebase → client | Kiosk confirms it paused and is ready for a scan |
@@ -44,6 +47,8 @@ Node history is held in-memory (no external database). Stats are sampled every 5
 | `GET /api/fleet` | Current fleet graph as `{ nodes[], links[] }` — live registry only (no mock fallback). |
 | `GET /api/chaos/ready` | Returns `{ ready: true }` once the lab homebase container is answering on `:5025`. The dashboard's `waitForLab()` polls this — but first waits for the probe to go DOWN (confirming `--force-recreate` killed old containers) before waiting for it to come back UP. This prevents connecting to stale containers. |
 | `POST /api/chaos/trigger` | Fires one chaos cycle immediately — emits `chaos:trigger` to the chaos agent which runs `runChaosStep(forced=true)`. Forced cycles use `pickFreshStation()` to pre-select the station with fewest recent history entries (tiebreak: fewest active faults/alerts). Only that station's context is shown to Haiku, so each manual click always lands on a different, fresh target. The scheduled loop is unaffected and can escalate within a station normally. A step lock (`stepInFlight`) prevents concurrent execution. Client-side guard (`chaosGuard` ref) prevents duplicate fires before React re-renders the disabled state. |
+| `GET /api/chaos/auto` | Returns `{ enabled: boolean }` — current chaos auto-loop state. |
+| `POST /api/chaos/auto/toggle` | Toggles the chaos auto-loop on/off. Broadcasts `chaos:auto { enabled, at }` to all clients and the chaos agent. |
 | `GET /api/telemetry/:nodeId` | Returns `{ nodeId, windowMs, stats[], events[] }` for the node. Optional `?window=<ms>` param (default 5 minutes). |
 
 Each station controller also exposes its own telemetry HTTP server (same port as the relay, `:5021`) for homebase pull-sync:
@@ -137,15 +142,20 @@ Nodes that miss 1–2 heartbeats (9–15s window) show a pulsing orange ring whi
 ## Testing
 
 ```bash
-cd server && npm test        # run tests once
-cd server && npm run test:watch  # watch mode
+# Server (playbook, fleetRegistry, telemetry) — 32 tests
+cd server && npm test
+cd server && npm run test:watch   # watch mode
+
+# @knightsrook/codes (CodeCaptureService, generateOfflineCode) — 16 tests
+cd packages/codes && npm test
 ```
 
 Server unit tests (Vitest) cover the critical business logic:
 - `FleetRegistry` — register, heartbeat, alerting/dead transitions, recovered events, event firing
 - `telemetry` — recordStats throttle, recordEvent, getHistory window queries
+- `playbook` — recordPatternResult accumulation, pattern sort/tiebreak, incident lifecycle, confidence gate thresholds
 
-Tests run automatically via pre-commit hook.
+The pre-commit hook runs `npm test` in the server package automatically. The codes package tests run independently.
 
 The homebase server installs `unhandledRejection` and `uncaughtException` handlers on startup so async failures surface in container logs rather than silently crashing the process.
 
@@ -179,18 +189,6 @@ Switching back to Offline Demo retains the playbook. Reset Playbook is the only 
 The chaos API (`/api/chaos/start|stop`) always routes through the Vite proxy to the host dev server (port 5020) because that process has Docker CLI access. Fleet state (socket.io) switches servers on mode change without a page reload — the same exported socket reference is reused by all components.
 
 > **Windows note:** `windowsHide: true` is set on the chaos `docker compose` spawn to prevent a CLI window flashing on screen. Vite proxy targets use `127.0.0.1` instead of `localhost` to avoid the IPv6/IPv4 mismatch in Node 18+ on Windows.
-
-## Tests
-
-```bash
-# Server (playbook, fleetRegistry, telemetry) — 32 tests
-cd server && npm test
-
-# @knightsrook/codes (CodeCaptureService, generateOfflineCode) — 16 tests
-cd packages/codes && npm test
-```
-
-The pre-commit hook runs `npm test` in the server package automatically. The codes package tests run independently.
 
 ## Docker
 
@@ -246,7 +244,7 @@ The server falls back to `buildMockFleet()` when no agents are connected (`USE_M
 
 ## Extracting `@knightsrook/xapi`
 
-The package has no imports from DDF and is ready to move to its own repo at any time. Steps:
+The package has no imports from DFF and is ready to move to its own repo at any time. Steps:
 
 **1. Copy the source**
 ```bash
