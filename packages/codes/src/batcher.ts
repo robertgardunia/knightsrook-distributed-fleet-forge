@@ -1,12 +1,12 @@
 import { generateOfflineCode } from './codeGen.js';
 import { OfflineQueue } from './offlineQueue.js';
-import { requestAccounts, syncOfflineAccounts, type MoodleConfig, type PendingAccount } from './moodleClient.js';
+import { generateCodes, claimCode, type MoodleConfig, type ClaimEntry } from './moodleClient.js';
 
-export type { PendingAccount };
+export type { ClaimEntry };
 
 export interface BatcherConfig {
   kioskId:   string;
-  queuePath: string;           // file path for offline sync queue
+  queuePath: string;          // file path for failed claim queue
   moodle:    MoodleConfig | null;  // null = always offline
 }
 
@@ -19,36 +19,47 @@ export class CodeBatcher {
     this.queue  = new OfflineQueue(config.queuePath);
   }
 
-  // Returns pending accounts. Each account's code is the temp LRS identity.
-  // email/name (when present) are used by Moodle to email the code to the user
-  // and by the LRS updater to reconcile xAPI records to the real account later.
-  async getAccounts(count: number): Promise<PendingAccount[]> {
+  // Returns a batch of fresh codes. Falls back to offline generation if Moodle is unreachable.
+  async getAccounts(count: number): Promise<string[]> {
     if (this.config.moodle) {
       try {
-        return await requestAccounts(this.config.moodle, this.config.kioskId, count);
+        return await generateCodes(this.config.moodle, count);
       } catch {
         // Moodle unreachable — fall through to offline generation
       }
     }
-    const accounts: PendingAccount[] = [];
-    for (let i = 0; i < count; i++) {
-      const code = generateOfflineCode(this.config.kioskId);
-      accounts.push({ code, email: null, name: null });
-      this.queue.push({ code, kioskId: this.config.kioskId, generatedAt: Date.now(), email: null, name: null });
-    }
-    return accounts;
+    return Array.from({ length: count }, () => generateOfflineCode(this.config.kioskId));
   }
 
+  // Fire-and-forget: associate a code with collected data (email, etc.).
+  // Queues locally if Moodle is unreachable — caller does not wait on the result.
+  async claim(code: string, data: Record<string, unknown>): Promise<void> {
+    const entry: ClaimEntry = { code, data };
+    if (!this.config.moodle) {
+      this.queue.push(entry);
+      return;
+    }
+    try {
+      await claimCode(this.config.moodle, entry);
+    } catch {
+      this.queue.push(entry);
+    }
+  }
+
+  // Retry any queued claims. Called on Moodle reconnect.
   async sync(): Promise<void> {
     if (!this.config.moodle) return;
     const pending = this.queue.drain();
     if (pending.length === 0) return;
-    try {
-      await syncOfflineAccounts(this.config.moodle, pending);
-    } catch {
-      // Put them back — sync will retry next time
-      pending.forEach(e => this.queue.push(e));
+    const failed: ClaimEntry[] = [];
+    for (const entry of pending) {
+      try {
+        await claimCode(this.config.moodle, entry);
+      } catch {
+        failed.push(entry);
+      }
     }
+    failed.forEach(e => this.queue.push(e));
   }
 
   pendingSync(): number { return this.queue.size(); }

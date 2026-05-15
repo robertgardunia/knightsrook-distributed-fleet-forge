@@ -1,27 +1,27 @@
 import { readFileSync, writeFileSync, existsSync } from 'fs';
-import type { OfflineSyncEntry } from './moodleClient.js';
+import type { ClaimEntry } from './moodleClient.js';
 
-// File-backed queue of offline-generated codes pending Moodle sync.
+// File-backed queue of pending claim_code calls that failed or couldn't reach Moodle.
 // Survives process restarts — same pattern as @knightsrook/xapi FileQueue.
 export class OfflineQueue {
-  private entries: OfflineSyncEntry[] = [];
+  private entries: ClaimEntry[] = [];
   private readonly path: string;
 
   constructor(path: string) {
     this.path = path;
     if (existsSync(path)) {
       try {
-        this.entries = JSON.parse(readFileSync(path, 'utf8')) as OfflineSyncEntry[];
+        this.entries = JSON.parse(readFileSync(path, 'utf8')) as ClaimEntry[];
       } catch { this.entries = []; }
     }
   }
 
-  push(entry: OfflineSyncEntry): void {
+  push(entry: ClaimEntry): void {
     this.entries.push(entry);
     this.persist();
   }
 
-  drain(): OfflineSyncEntry[] {
+  drain(): ClaimEntry[] {
     const all = [...this.entries];
     this.entries = [];
     this.persist();
