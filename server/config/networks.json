@@ -1,0 +1,12 @@
+[
+  {
+    "id": "full",
+    "name": "Full Fleet",
+    "composeFile": "docker-compose.chaos.yml"
+  },
+  {
+    "id": "e2e",
+    "name": "E2E Test",
+    "composeFile": "docker-compose.chaos.e2e.yml"
+  }
+]

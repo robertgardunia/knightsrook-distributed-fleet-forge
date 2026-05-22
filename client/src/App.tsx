@@ -118,6 +118,10 @@ export default function App() {
   const fgHandle = useRef<FleetGraphHandle>(null);
   const gridRef = useRef<HTMLDivElement>(null);
   const chaosGuard = useRef(false);
+  const [networks, setNetworks] = useState<Array<{ id: string; name: string }>>([]);
+  const [activeNetworkId, setActiveNetworkId] = useState('full');
+  const [netPickerOpen, setNetPickerOpen] = useState(false);
+  const netPickerRef = useRef<HTMLDivElement>(null);
   const isForging = labMode === 'lab' && graph.isMock !== false;
 
   const visibleGraph = (() => {
@@ -254,6 +258,27 @@ export default function App() {
     return () => { cancelled = true; };
   }, [labMode]);
 
+  useEffect(() => {
+    fetch('/api/networks')
+      .then(r => r.json() as Promise<{ networks: Array<{ id: string; name: string }>; activeId: string }>)
+      .then(({ networks, activeId }) => { setNetworks(networks); setActiveNetworkId(activeId); })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (netPickerRef.current && !netPickerRef.current.contains(e.target as Node)) setNetPickerOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const switchNetwork = async (id: string) => {
+    await fetch('/api/networks/active', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
+    setActiveNetworkId(id);
+    setNetPickerOpen(false);
+  };
+
   return (
     <div style={{ width: '100%', height: '100dvh', background: '#0f172a', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <header style={{ height: 52, padding: '0 20px', borderBottom: '1px solid #1e293b', background: '#0d1f35', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -319,6 +344,32 @@ export default function App() {
               ))}
             </div>
           )}
+
+          {/* Network picker */}
+          <div ref={netPickerRef} style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 5, marginRight: 4 }}>
+            <span style={{ fontSize: '0.65rem', color: '#94a3b8', letterSpacing: '0.06em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
+              {networks.find(n => n.id === activeNetworkId)?.name ?? '—'}
+            </span>
+            <button
+              disabled={labMode === 'lab'}
+              onClick={() => setNetPickerOpen(o => !o)}
+              title={labMode === 'lab' ? 'Stop the lab before switching networks' : 'Switch network'}
+              style={{ background: 'transparent', border: '1px solid #1e293b', color: '#475569', padding: '2px 5px', fontSize: '0.6rem', cursor: labMode === 'lab' ? 'default' : 'pointer', borderRadius: 2, opacity: labMode === 'lab' ? 0.3 : 1, lineHeight: 1 }}
+            >▾</button>
+            {netPickerOpen && (
+              <div style={{ position: 'absolute', top: 'calc(100% + 6px)', right: 0, background: '#0d1f35', border: '1px solid #1e293b', borderRadius: 3, zIndex: 100, minWidth: 140 }}>
+                {networks.map(n => (
+                  <div
+                    key={n.id}
+                    onClick={() => switchNetwork(n.id)}
+                    style={{ padding: '7px 14px', cursor: 'pointer', color: n.id === activeNetworkId ? '#4ade80' : '#94a3b8', fontSize: '0.65rem', letterSpacing: '0.06em', background: n.id === activeNetworkId ? '#0d2a1a' : 'transparent', whiteSpace: 'nowrap' }}
+                    onMouseEnter={e => { if (n.id !== activeNetworkId) e.currentTarget.style.background = '#1e293b'; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = n.id === activeNetworkId ? '#0d2a1a' : 'transparent'; }}
+                  >{n.name}</div>
+                ))}
+              </div>
+            )}
+          </div>
 
           {/* Mode toggle */}
           <div style={{ display: 'flex', border: '1px solid #1e293b', borderRadius: 3, overflow: 'hidden', marginRight: 6 }}>

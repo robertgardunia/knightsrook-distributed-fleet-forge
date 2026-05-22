@@ -1,0 +1,81 @@
+# E2E Test — minimal cascade: 1 homebase + 1 station + 1 game kiosk + 1 info kiosk
+# Same network isolation as full fleet; no chaos-agent.
+
+services:
+
+  homebase:
+    container_name: homebase
+    build:
+      context: .
+      dockerfile: containers/homebase/Dockerfile
+    environment:
+      PORT: "5020"
+      NODE_ENV: production
+      USE_MOCK: "false"
+      TOXIPROXY_URL: "http://chaos-proxy:8474"
+      ANTHROPIC_API_KEY: "${ANTHROPIC_API_KEY}"
+      LL_ENDPOINT: "${LL_ENDPOINT}"
+      LL_KEY: "${LL_KEY}"
+      LL_SECRET: "${LL_SECRET}"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - homebase-data:/app/data
+    ports:
+      - "5025:5020"
+    networks: [fleet-net]
+    restart: "no"
+
+  s1-controller:
+    container_name: s1-controller
+    build:
+      context: .
+      dockerfile: containers/station-controller/Dockerfile
+    environment:
+      AGENT_ID: s1-controller
+      AGENT_NAME: S1
+      HOMEBASE_URL: http://chaos-proxy:21001
+      RELAY_PORT: "5021"
+    volumes:
+      - s1-controller-data:/app/data
+    networks: [fleet-net, station-s1-net]
+    depends_on: [homebase, chaos-proxy]
+    restart: "no"
+
+  s1-game-1:
+    container_name: s1-game-1
+    build:
+      context: .
+      dockerfile: containers/game-kiosk/Dockerfile
+    environment: { AGENT_ID: s1-game-1, AGENT_NAME: KG1, AGENT_ROLE: game-kiosk, AGENT_PARENT: s1-controller, HOMEBASE_URL: "http://s1-controller:5021" }
+    ports: ["18101:8080"]
+    networks: [station-s1-net]
+    depends_on: [s1-controller]
+    restart: "no"
+
+  s1-info-1:
+    container_name: s1-info-1
+    build:
+      context: .
+      dockerfile: containers/info-kiosk/Dockerfile
+    environment: { AGENT_ID: s1-info-1, AGENT_NAME: KI1, AGENT_ROLE: info-kiosk, AGENT_PARENT: s1-controller, HOMEBASE_URL: "http://s1-controller:5021" }
+    ports: ["18151:8080"]
+    networks: [station-s1-net]
+    depends_on: [s1-controller]
+    restart: "no"
+
+  chaos-proxy:
+    image: ghcr.io/shopify/toxiproxy:2.9.0
+    command: ["-host", "0.0.0.0", "-config", "/etc/toxiproxy/config.json"]
+    volumes:
+      - ./config/toxiproxy.json:/etc/toxiproxy/config.json:ro
+    ports: ["8474:8474"]
+    networks: [fleet-net]
+    restart: "no"
+
+volumes:
+  homebase-data:
+  s1-controller-data:
+
+networks:
+  fleet-net:
+  station-s1-net:

@@ -4,6 +4,7 @@ import path from 'path';
 import type { FleetRegistry } from '../lib/fleetRegistry.js';
 import { getHistory } from '../lib/telemetry.js';
 import { getPatterns, getRecentIncidents, clearPlaybook } from '../lib/playbook.js';
+import { createNetworkStore } from '../lib/networkStore.js';
 
 type EmitFn = (event: string, ...args: unknown[]) => void;
 let _emit: EmitFn = () => {};
@@ -15,9 +16,12 @@ export function getChaosAutoEnabled(): boolean { return chaosAutoEnabled; }
 // Project root is one level up from the server/ directory.
 const projectRoot = path.resolve(process.cwd(), '..');
 
-function runCompose(args: string[]) {
-  console.log(`[routes] runCompose: docker compose ${args.join(' ')} (cwd=${projectRoot})`);
-  const child = spawn('docker', ['compose', '-f', 'docker-compose.chaos.yml', ...args], {
+const networkStore = createNetworkStore();
+
+function runCompose(args: string[], composeFile?: string) {
+  const file = composeFile ?? networkStore.getActive().composeFile;
+  console.log(`[routes] runCompose: docker compose -f ${file} ${args.join(' ')} (cwd=${projectRoot})`);
+  const child = spawn('docker', ['compose', '-f', file, ...args], {
     cwd: projectRoot,
     stdio: 'pipe',
     shell: true,
@@ -34,6 +38,21 @@ export function createRouter(registry: FleetRegistry) {
 
   router.get('/health', (_req, res) => {
     res.json({ success: true, data: { status: 'ok' }, error: undefined });
+  });
+
+  router.get('/networks', (_req, res) => {
+    res.json({ networks: networkStore.list(), activeId: networkStore.getActive().id });
+  });
+
+  router.post('/networks/active', (req, res) => {
+    const { id } = req.body as { id?: string };
+    if (!id) { res.status(400).json({ error: 'id required' }); return; }
+    try {
+      networkStore.setActive(id);
+      res.json({ activeId: id });
+    } catch (err) {
+      res.status(400).json({ error: String(err) });
+    }
   });
 
   router.get('/chaos/ready', async (_req, res) => {

@@ -169,12 +169,21 @@ pnpm install
 pnpm dev
 ```
 
-The header has a two-mode segmented toggle:
+The header has a two-mode segmented toggle and a network picker:
 
 | Mode | Behavior |
 |---|---|
 | **Offline Demo** | Default. Mock fleet via host dev server (port 5020, Vite proxy). No containers needed. Switching to it calls `POST /api/chaos/stop`, clears registry, reconnects socket to Vite proxy. |
-| **Online Lab** | Calls `POST /api/chaos/start` → `docker compose -f docker-compose.chaos.yml up --build --force-recreate -d`. `--force-recreate` guarantees fresh containers every time — old ones are stopped and rebuilt even if a previous demo→lab→demo cycle left them running. All fleet servers are real containers — homebase publishes fleet socket on port **5025**, dashboard reconnects directly to `localhost:5025`. Station controllers connect to `homebase:5020` inside Docker; Toxiproxy can inject failures on `fleet-net`. Graph clears on switch; "Forging Network" overlay shows until agents register. Activity panel and Playbook appear. |
+| **Online Lab** | Calls `POST /api/chaos/start` → `docker compose -f <active-network-compose> up --build --force-recreate -d`. `--force-recreate` guarantees fresh containers every time. All fleet servers are real containers — homebase publishes fleet socket on port **5025**, dashboard reconnects directly to `localhost:5025`. Graph clears on switch; "Forging Network" overlay shows until agents register. Activity panel and Playbook appear. |
+
+**Network picker** — displayed in the header to the left of the mode toggle. Shows the active network name; a small `▾` button opens a dropdown to switch. Disabled while the lab is running. Active network persists to `server/data/networks.json`.
+
+| Network | Compose file | Nodes |
+|---|---|---|
+| **Full Fleet** | `docker-compose.chaos.yml` | 1 homebase + 4 stations × (4 game + 2 info kiosks) + chaos-agent = 29 nodes |
+| **E2E Test** | `docker-compose.chaos.e2e.yml` | 1 homebase + 1 station + 1 game kiosk + 1 info kiosk (no chaos-agent) |
+
+New networks: add an entry to `server/data/networks.json` with an `id`, `name`, and `composeFile` pointing to a docker-compose file at the project root.
 
 Three reset controls appear in the header while in Online Lab mode:
 
