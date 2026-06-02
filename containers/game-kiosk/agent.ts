@@ -1,6 +1,6 @@
 import { io } from 'socket.io-client';
-import { buildStatement, MemQueue, ACTIVITY_BASE } from '@knightsrook/xapi';
-import { CodeCaptureService } from '@knightsrook/codes/catcher';
+import { buildStatement, MemQueue } from '@knightsrook/xapi';
+import { CodeCaptureService, type AccountObject } from '@knightsrook/codes/catcher';
 
 const AGENT_ID     = process.env.AGENT_ID!;
 const AGENT_NAME   = process.env.AGENT_NAME!;
@@ -44,16 +44,16 @@ const codeCapture = new CodeCaptureService();
 
 const xapiQueue = new MemQueue();
 
-function xapi(
-  actorName: string,
-  actorId:   string,
-  verbKey:   string,
-  objectId:  string,
-  label:     string,
-  ext:       Record<string, unknown> = {},
-): void {
+function xapi(account: AccountObject, verbKey: string, activitySlug: string): void {
   if (!codeCapture.current()) return;
-  const stmt = buildStatement({ actorName, actorId, verbKey, objectId, label, nodeId: AGENT_ID, ext });
+  const stmt = buildStatement({
+    actorName:    account.code,
+    actorId:      account.code,
+    verbKey,
+    activitySlug,
+    eventCode:    account.eventId,
+    eventName:    account.eventName,
+  });
   if (socket.connected && lrsEnabled) {
     socket.emit('xapi:statement', stmt);
   } else {
@@ -103,17 +103,15 @@ socket.on('kiosk:emulate:stop', ({ nodeId }: { nodeId: string }) => {
   scheduleArrival();
 });
 
-// Hardware adapter: real card reader / HID scanner feeds codeCapture.capture(code)
-// Demo adapter: monitoring control flow → kiosk:scan → capture
 socket.on('kiosk:scan', ({ nodeId, data }: { nodeId: string; data: string }) => {
   if (nodeId !== AGENT_ID) return;
   codeCapture.capture(data);
 });
 
-codeCapture.on('user:identified', (code: string) => {
+codeCapture.on('user:identified', (account: AccountObject) => {
   if (!emulating) return;
-  console.log(`[${AGENT_ID}] code captured: ${code}`);
-  signIn(code);
+  console.log(`[${AGENT_ID}] code captured: ${account.code}`);
+  signIn(account);
 });
 
 codeCapture.on('user:cleared', () => {
@@ -121,6 +119,8 @@ codeCapture.on('user:cleared', () => {
 });
 
 // ── Player simulation ────────────────────────────────────────────────────────
+
+const SIM_EVENT: AccountObject = { code: '', eventId: 'sim', eventName: 'simulation' };
 
 const PLAYERS = [
   'Alex','Jordan','Riley','Morgan','Sam','Casey','Taylor','Devon','Skyler','Quinn',
@@ -132,7 +132,7 @@ function rand(min: number, max: number) { return Math.floor(Math.random() * (max
 function pick<T>(arr: T[]): T { return arr[Math.floor(Math.random() * arr.length)]; }
 function sid() { return Math.random().toString(16).slice(2, 6).toUpperCase(); }
 
-let currentPlayer: string | null = null;
+let currentPlayer: AccountObject | null = null;
 let currentSession: string | null = null;
 let gamesThisSession = 0;
 let sessionTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -145,8 +145,8 @@ function clearTimers() {
 
 function signOut(reason: 'quit' | 'timeout' | 'displaced') {
   if (!currentPlayer) return;
-  console.log(`[${AGENT_ID}] SIGNOUT player=${currentPlayer} session=${currentSession} games=${gamesThisSession} reason=${reason}`);
-  xapi(currentPlayer, currentPlayer, 'exited', `${ACTIVITY_BASE}/hexgl`, 'HexGL Racing Game', { reason, games: gamesThisSession });
+  console.log(`[${AGENT_ID}] SIGNOUT code=${currentPlayer.code} session=${currentSession} games=${gamesThisSession} reason=${reason}`);
+  xapi(currentPlayer, 'exited', 'hexgl');
   currentPlayer = null;
   currentSession = null;
   gamesThisSession = 0;
@@ -156,8 +156,8 @@ function signOut(reason: 'quit' | 'timeout' | 'displaced') {
 
 function endGame(totalScore: number) {
   if (!currentPlayer) return;
-  console.log(`[${AGENT_ID}] GAME_OVER player=${currentPlayer} session=${currentSession} score=${totalScore}`);
-  xapi(currentPlayer, currentPlayer, 'completed', `${ACTIVITY_BASE}/hexgl`, 'HexGL Racing Game', { score: { raw: totalScore } });
+  console.log(`[${AGENT_ID}] GAME_OVER code=${currentPlayer.code} session=${currentSession} score=${totalScore}`);
+  xapi(currentPlayer, 'completed', 'hexgl');
   gamesThisSession++;
   if (Math.random() < 0.45) {
     nextEventTimeout = setTimeout(() => startGame(), rand(3_000, 8_000));
@@ -169,8 +169,8 @@ function endGame(totalScore: number) {
 function startGame() {
   if (!currentPlayer) return;
   const lapCount = rand(1, 3);
-  console.log(`[${AGENT_ID}] GAME_START player=${currentPlayer} session=${currentSession} laps=${lapCount}`);
-  xapi(currentPlayer, currentPlayer, 'launched', `${ACTIVITY_BASE}/hexgl`, 'HexGL Racing Game', { laps: lapCount });
+  console.log(`[${AGENT_ID}] GAME_START code=${currentPlayer.code} session=${currentSession} laps=${lapCount}`);
+  xapi(currentPlayer, 'launched', 'hexgl');
 
   let lap = 0;
   let totalScore = 0;
@@ -178,16 +178,13 @@ function startGame() {
   const nextLap = () => {
     if (!currentPlayer) return;
     lap++;
-    const lapMs   = rand(8_000, 22_000);
-    const lapSecs = (lapMs / 1000).toFixed(1);
-    const score   = rand(700, 2800);
-    totalScore += score;
+    const lapMs  = rand(8_000, 22_000);
+    const score  = rand(700, 2800);
+    totalScore  += score;
     nextEventTimeout = setTimeout(() => {
       if (!currentPlayer) return;
-      console.log(`[${AGENT_ID}] LAP_COMPLETE player=${currentPlayer} lap=${lap}/${lapCount} time=${lapSecs}s score=${score}`);
-      xapi(currentPlayer, currentPlayer, 'progressed', `${ACTIVITY_BASE}/hexgl`, 'HexGL Racing Game', {
-        lap: `${lap}/${lapCount}`, time: `${lapSecs}s`, score,
-      });
+      console.log(`[${AGENT_ID}] LAP_COMPLETE code=${currentPlayer.code} lap=${lap}/${lapCount} score=${score}`);
+      xapi(currentPlayer, 'progressed', 'hexgl');
       if (lap < lapCount) {
         nextLap();
       } else {
@@ -202,19 +199,21 @@ function startGame() {
   sessionTimeout = setTimeout(() => signOut('timeout'), 5 * 60_000);
 }
 
-function signIn(name: string) {
+function signIn(account: AccountObject) {
   if (currentPlayer) signOut('displaced');
   currentSession = sid();
-  currentPlayer  = name;
+  currentPlayer  = account;
   gamesThisSession = 0;
-  console.log(`[${AGENT_ID}] SIGNIN player=${currentPlayer} session=${currentSession}`);
-  xapi(currentPlayer, currentPlayer, 'initialized', `${ACTIVITY_BASE}/hexgl`, 'HexGL Racing Game');
+  console.log(`[${AGENT_ID}] SIGNIN code=${account.code} session=${currentSession}`);
+  xapi(currentPlayer, 'initialized', 'hexgl');
   nextEventTimeout = setTimeout(() => startGame(), rand(2_000, 6_000));
 }
 
 function scheduleArrival() {
   if (emulating) return;
-  nextEventTimeout = setTimeout(() => { if (!emulating) signIn(pick(PLAYERS)); }, rand(10_000, 45_000));
+  nextEventTimeout = setTimeout(() => {
+    if (!emulating) signIn({ ...SIM_EVENT, code: pick(PLAYERS).toLowerCase() });
+  }, rand(10_000, 45_000));
 }
 
 console.log(`[${AGENT_ID}] starting — role=${AGENT_ROLE} parent=${AGENT_PARENT ?? 'none'} homebase=${HOMEBASE_URL}`);

@@ -1,6 +1,6 @@
 import { io } from 'socket.io-client';
-import { buildStatement, MemQueue, ACTIVITY_BASE } from '@knightsrook/xapi';
-import { CodeCaptureService } from '@knightsrook/codes/catcher';
+import { buildStatement, MemQueue } from '@knightsrook/xapi';
+import { CodeCaptureService, type AccountObject } from '@knightsrook/codes/catcher';
 
 const AGENT_ID     = process.env.AGENT_ID!;
 const AGENT_NAME   = process.env.AGENT_NAME!;
@@ -44,16 +44,16 @@ const codeCapture = new CodeCaptureService();
 
 const xapiQueue = new MemQueue();
 
-function xapi(
-  actorName: string,
-  actorId:   string,
-  verbKey:   string,
-  objectId:  string,
-  label:     string,
-  ext:       Record<string, unknown> = {},
-): void {
+function xapi(account: AccountObject, verbKey: string, activitySlug: string): void {
   if (!codeCapture.current()) return;
-  const stmt = buildStatement({ actorName, actorId, verbKey, objectId, label, nodeId: AGENT_ID, ext });
+  const stmt = buildStatement({
+    actorName:    account.code,
+    actorId:      account.code,
+    verbKey,
+    activitySlug,
+    eventCode:    account.eventId,
+    eventName:    account.eventName,
+  });
   if (socket.connected && lrsEnabled) {
     socket.emit('xapi:statement', stmt);
   } else {
@@ -104,17 +104,15 @@ socket.on('kiosk:emulate:stop', ({ nodeId }: { nodeId: string }) => {
   scheduleNextVisitor();
 });
 
-// Hardware adapter: real card reader / HID scanner feeds codeCapture.capture(code)
-// Demo adapter: monitoring control flow → kiosk:scan → capture
 socket.on('kiosk:scan', ({ nodeId, data }: { nodeId: string; data: string }) => {
   if (nodeId !== AGENT_ID) return;
   codeCapture.capture(data);
 });
 
-codeCapture.on('user:identified', (code: string) => {
+codeCapture.on('user:identified', (account: AccountObject) => {
   if (!emulating) return;
-  console.log(`[${AGENT_ID}] code captured: ${code}`);
-  emulatedId = code;
+  console.log(`[${AGENT_ID}] code captured: ${account.code}`);
+  currentAccount = account;
   startVisit();
 });
 
@@ -124,12 +122,13 @@ codeCapture.on('user:cleared', () => {
 
 // ── Visitor simulation ───────────────────────────────────────────────────────
 
+const SIM_EVENT: AccountObject = { code: 'visitor', eventId: 'sim', eventName: 'simulation' };
 const SLIDES = ['info-build-racer', 'info-controls', 'info-cornering', 'info-scan-qr'];
 
 function rand(min: number, max: number) { return Math.floor(Math.random() * (max - min + 1)) + min; }
 
-let visiting   = false;
-let emulatedId = '';
+let visiting      = false;
+let currentAccount: AccountObject = SIM_EVENT;
 let slideTimer:  ReturnType<typeof setTimeout> | null = null;
 let departTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -139,7 +138,7 @@ function depart(dwellSecs: number) {
   if (slideTimer)  { clearTimeout(slideTimer);  slideTimer  = null; }
   if (departTimer) { clearTimeout(departTimer); departTimer = null; }
   console.log(`[${AGENT_ID}] VISITOR_DEPART dwell=${dwellSecs}s`);
-  xapi('visitor', emulatedId, 'exited', `${ACTIVITY_BASE}/info-kiosk/slideshow`, 'Fleet Info Kiosk', { dwell: dwellSecs });
+  xapi(currentAccount, 'exited', 'info-kiosk/slideshow');
   setTimeout(scheduleNextVisitor, rand(8_000, 40_000));
 }
 
@@ -147,12 +146,12 @@ function startVisit() {
   visiting = true;
   const dwellMs = rand(20_000, 90_000);
   console.log(`[${AGENT_ID}] VISITOR_ARRIVE`);
-  xapi('visitor', emulatedId, 'launched', `${ACTIVITY_BASE}/info-kiosk/slideshow`, 'Fleet Info Kiosk');
+  xapi(currentAccount, 'launched', 'info-kiosk/slideshow');
 
   let slideIdx = Math.floor(Math.random() * SLIDES.length);
   const slideName = SLIDES[slideIdx];
   console.log(`[${AGENT_ID}] SLIDE_VIEW slide=${slideName}`);
-  xapi('visitor', emulatedId, 'experienced', `${ACTIVITY_BASE}/info-kiosk/slide/${slideName}`, slideName.replace(/-/g, ' '));
+  xapi(currentAccount, 'experienced', `info-kiosk/slide/${slideName}`);
 
   const scheduleSlide = (remainingMs: number) => {
     const delay = rand(8_000, 20_000);
@@ -162,7 +161,7 @@ function startVisit() {
       slideIdx = (slideIdx + 1) % SLIDES.length;
       const name = SLIDES[slideIdx];
       console.log(`[${AGENT_ID}] SLIDE_VIEW slide=${name}`);
-      xapi('visitor', emulatedId, 'experienced', `${ACTIVITY_BASE}/info-kiosk/slide/${name}`, name.replace(/-/g, ' '));
+      xapi(currentAccount, 'experienced', `info-kiosk/slide/${name}`);
       scheduleSlide(remainingMs - delay);
     }, delay);
   };
@@ -173,7 +172,7 @@ function startVisit() {
     setTimeout(() => {
       if (visiting) {
         console.log(`[${AGENT_ID}] QR_SCAN`);
-        xapi('visitor', emulatedId, 'interacted', `${ACTIVITY_BASE}/info-kiosk/qr-code`, 'Registration QR Code');
+        xapi(currentAccount, 'interacted', 'info-kiosk/qr-code');
       }
     }, qrDelay);
   }
@@ -183,7 +182,7 @@ function startVisit() {
 
 function scheduleNextVisitor() {
   if (emulating) return;
-  setTimeout(() => { if (!emulating) startVisit(); }, rand(10_000, 45_000));
+  setTimeout(() => { if (!emulating) { currentAccount = SIM_EVENT; startVisit(); } }, rand(10_000, 45_000));
 }
 
 console.log(`[${AGENT_ID}] starting — role=${AGENT_ROLE} parent=${AGENT_PARENT ?? 'none'} homebase=${HOMEBASE_URL}`);

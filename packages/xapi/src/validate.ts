@@ -55,10 +55,12 @@ export function validateStatement(raw: unknown): XApiStatement {
   const defName = requireObject(def, 'name');
   requireString(defName, 'en-US');
 
-  const ctx = requireObject(s, 'context');
-  requireString(ctx, 'platform');
-  if (typeof ctx['extensions'] !== 'object' || ctx['extensions'] === null) {
-    throw new XApiValidationError('context.extensions', 'must be an object');
+  if (s['context'] !== undefined) {
+    const ctx = requireObject(s, 'context');
+    requireString(ctx, 'platform');
+    if (typeof ctx['extensions'] !== 'object' || ctx['extensions'] === null) {
+      throw new XApiValidationError('context.extensions', 'must be an object');
+    }
   }
 
   return s as unknown as XApiStatement;

@@ -1,6 +1,7 @@
 import { generateOfflineCode } from './codeGen.js';
 import { OfflineQueue } from './offlineQueue.js';
 import { generateCodes, claimCode, type MoodleConfig, type ClaimEntry } from './moodleClient.js';
+import type { AccountObject } from './catcher.js';
 
 export type { ClaimEntry };
 
@@ -19,8 +20,9 @@ export class CodeBatcher {
     this.queue  = new OfflineQueue(config.queuePath);
   }
 
-  // Returns a batch of fresh codes. Falls back to offline generation if Moodle is unreachable.
-  async getAccounts(count: number): Promise<string[]> {
+  // Returns a batch of account objects. Falls back to offline generation if Moodle is unreachable.
+  // Offline codes carry empty event info — acceptable for testing, not for production.
+  async getAccounts(count: number): Promise<AccountObject[]> {
     if (this.config.moodle) {
       try {
         return await generateCodes(this.config.moodle, count);
@@ -28,7 +30,11 @@ export class CodeBatcher {
         // Moodle unreachable — fall through to offline generation
       }
     }
-    return Array.from({ length: count }, () => generateOfflineCode(this.config.kioskId));
+    return Array.from({ length: count }, () => ({
+      code:      generateOfflineCode(this.config.kioskId),
+      eventId:   '',
+      eventName: '',
+    }));
   }
 
   // Fire-and-forget: associate a code with collected data (email, etc.).

@@ -1,22 +1,41 @@
 import { EventEmitter } from 'events';
 
-export class CodeCaptureService extends EventEmitter {
-  private activeCode: string | null = null;
+export interface AccountObject {
+  code:      string;
+  eventId:   string;
+  eventName: string;
+}
 
-  capture(code: string): void {
-    const trimmed = code.trim();
+export class CodeCaptureService extends EventEmitter {
+  private active: AccountObject | null = null;
+
+  capture(payload: string): void {
+    const trimmed = payload.trim();
     if (!trimmed) return;
-    this.activeCode = trimmed;
-    this.emit('user:identified', trimmed);
+
+    let account: AccountObject;
+    try {
+      const parsed = JSON.parse(trimmed) as Partial<AccountObject>;
+      account = {
+        code:      parsed.code      ?? trimmed,
+        eventId:   parsed.eventId   ?? '',
+        eventName: parsed.eventName ?? '',
+      };
+    } catch {
+      account = { code: trimmed, eventId: '', eventName: '' };
+    }
+
+    this.active = account;
+    this.emit('user:identified', account);
   }
 
   clear(): void {
-    if (!this.activeCode) return;
-    this.activeCode = null;
+    if (!this.active) return;
+    this.active = null;
     this.emit('user:cleared');
   }
 
-  current(): string | null {
-    return this.activeCode;
+  current(): AccountObject | null {
+    return this.active;
   }
 }

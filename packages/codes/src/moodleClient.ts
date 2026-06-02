@@ -1,6 +1,10 @@
+import type { AccountObject } from './catcher.js';
+
 export interface MoodleConfig {
-  endpoint: string;  // https://<host>/local/tsn_extauth/api.php
-  apiKey:   string;
+  endpoint:  string;  // https://<host>/local/tsn_extauth/api.php
+  apiKey:    string;
+  eventCode: string;
+  eventName: string;
 }
 
 export interface ClaimEntry {
@@ -11,12 +15,18 @@ export interface ClaimEntry {
 export async function generateCodes(
   config: MoodleConfig,
   count:  number,
-): Promise<string[]> {
-  const url = `${config.endpoint}?action=generate&role=student&count=${count}`;
-  const res  = await fetch(url, { method: 'POST', headers: { 'X-Api-Key': config.apiKey } });
-  const body = await res.json() as { ok: boolean; codes: string[] };
+): Promise<AccountObject[]> {
+  const params = new URLSearchParams({
+    action:     'generate',
+    role:       'student',
+    count:      String(count),
+    event_code: config.eventCode,
+    event_name: config.eventName,
+  });
+  const res  = await fetch(`${config.endpoint}?${params}`, { method: 'POST', headers: { 'X-Api-Key': config.apiKey } });
+  const body = await res.json() as { ok: boolean; accounts: Array<{ code: string; event_id: string; event_name: string }> };
   if (!body.ok) throw new Error(`generate failed (${res.status})`);
-  return body.codes;
+  return body.accounts.map(a => ({ code: a.code, eventId: a.event_id, eventName: a.event_name }));
 }
 
 // Fire-and-forget — throws on network error so caller can queue.

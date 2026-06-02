@@ -28,14 +28,13 @@ export function isTsnSeed(s: string): boolean {
 }
 
 export interface BuildStatementParams {
-  actorName: string;
-  actorId:   string;
-  verbKey:   string;
-  objectId:  string;
-  label:     string;
-  nodeId:    string;
-  platform?: string;
-  ext?:      Record<string, unknown>;
+  actorName:    string;
+  actorId:      string;
+  verbKey:      string;
+  activitySlug: string;  // e.g. 'hexgl', 'info-kiosk/slideshow'
+  eventCode:    string;  // e.g. 'summer26'
+  eventName:    string;  // e.g. 'dallas-camp'
+  platform?:    string;
 }
 
 export function buildStatement(p: BuildStatementParams): XApiStatement {
@@ -44,18 +43,14 @@ export function buildStatement(p: BuildStatementParams): XApiStatement {
   const platform = p.platform ?? 'KnightsRook Fleet';
   return {
     id:        crypto.randomUUID(),
-    actor:     { objectType: 'Agent', name: p.actorName, mbox },
+    actor:     { objectType: 'Agent', name: p.actorName.toLowerCase(), mbox },
     authority: { objectType: 'Agent', name: platform, mbox: PLATFORM_MBOX },
     verb:      { id: verb.id, display: { 'en-US': verb.display } },
-    object:    { objectType: 'Activity', id: p.objectId, definition: { name: { 'en-US': p.label } } },
-    timestamp: new Date().toISOString(),
-    context: {
-      platform,
-      extensions: {
-        [`${FLEET_ORIGIN}/ext/nodeId`]:  p.nodeId,
-        [`${FLEET_ORIGIN}/ext/station`]: p.nodeId.split('-')[0],
-        ...(p.ext ?? {}),
-      },
+    object:    {
+      objectType: 'Activity',
+      id:         `${ACTIVITY_BASE}/${p.eventCode}/${p.activitySlug}`,
+      definition: { name: { 'en-US': `${p.eventCode}-${p.eventName}` } },
     },
+    timestamp: new Date().toISOString(),
   };
 }

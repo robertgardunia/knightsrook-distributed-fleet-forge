@@ -5,7 +5,7 @@ export interface XApiStatement {
   verb:      { id: string; display: { 'en-US': string } };
   object:    { objectType: 'Activity'; id: string; definition: { name: { 'en-US': string } } };
   timestamp: string;
-  context:   { platform: string; extensions: Record<string, unknown> };
+  context?:  { platform: string; extensions: Record<string, unknown> };
 }
 
 // NOTE: AuthMethod / AuthPathConfig / TsnSeed are temporary guests — they belong
